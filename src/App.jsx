@@ -342,10 +342,12 @@ export default function App() {
   const [municipioFilter, setMunicipioFilter] = useState('all');
   const [articuladorFilter, setArticuladorFilter] = useState('all');
   const [classeFilter, setClasseFilter] = useState('all');
-  const [locationScope, setLocationScope] = useState('all'); // NOVO: Filtro mestre de escopo
+  const [locationScope, setLocationScope] = useState('all'); 
   
   const [viewMode, setViewMode] = useState('cards');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  
+  const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'desc' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -378,15 +380,27 @@ export default function App() {
     };
   }, [events]);
 
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key !== key) return '';
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
   const filteredEvents = useMemo(() => {
-    return events.filter(ev => {
+    let result = events.filter(ev => {
       if (timeFilter === 'future' && !isFuture(ev['Início'])) return false;
       if (timeFilter === 'past' && !isPast(ev['Início'])) return false;
       if (municipioFilter !== 'all' && ev['Município'] !== municipioFilter) return false;
       if (articuladorFilter !== 'all' && ev['Articulador'] !== articuladorFilter) return false;
       if (classeFilter !== 'all' && ev['Classe de Atividade'] !== classeFilter) return false;
       
-      // APLICAÇÃO DO FILTRO MESTRE (CAPITAL VS INTERIOR)
       const isFloripa = normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa');
       if (locationScope === 'capital' && !isFloripa) return false;
       if (locationScope === 'interior' && isFloripa) return false;
@@ -396,8 +410,27 @@ export default function App() {
         return normalizerFilter(ev['Título']).includes(term) || normalizerFilter(ev['Local']).includes(term);
       }
       return true;
-    }).sort((a, b) => new Date(a['Início']) - new Date(b['Início']));
-  }, [events, search, timeFilter, municipioFilter, articuladorFilter, classeFilter, locationScope]);
+    });
+
+    result.sort((a, b) => {
+      let aVal = a[sortConfig.key] || '';
+      let bVal = b[sortConfig.key] || '';
+
+      if (sortConfig.key === 'Início') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      } else {
+        aVal = aVal.toString().toLowerCase();
+        bVal = bVal.toString().toLowerCase();
+      }
+
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [events, search, timeFilter, municipioFilter, articuladorFilter, classeFilter, locationScope, sortConfig]);
 
   const dashboardStats = useMemo(() => {
     const agg = (key) => {
@@ -555,10 +588,10 @@ export default function App() {
               <table className="w-full text-left">
                 <thead className="text-[10px] text-[#Fdfcf0] uppercase bg-[#111111]">
                   <tr>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Título</th>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Data</th>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Município</th>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Articulador</th>
+                    <th onClick={() => requestSort('Título')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Título{getSortIndicator('Título')}</th>
+                    <th onClick={() => requestSort('Início')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Data{getSortIndicator('Início')}</th>
+                    <th onClick={() => requestSort('Município')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Município{getSortIndicator('Município')}</th>
+                    <th onClick={() => requestSort('Articulador')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Articulador{getSortIndicator('Articulador')}</th>
                   </tr>
                 </thead>
                 <tbody>
