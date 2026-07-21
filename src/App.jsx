@@ -27,24 +27,13 @@ const MOCK_DATA = [
   { id: 6, 'Título': 'Reunião Continente', 'Início': new Date(Date.now() + 9600000).toISOString(), 'Fim': new Date(Date.now() + 17200000).toISOString(), 'Descrição': 'Bairro.', 'Duração': 120, 'Local': 'Associação', 'Classe de Atividade': 'Comunidade', 'Região': 'Continente', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Pendente' },
 ];
 
-// Dicionário de Coordenadas
-const SC_COORDS = {
-  'florianopolis': [-27.5954, -48.5480], 'sao jose': [-27.6136, -48.6275], 'palhoca': [-27.6444, -48.6672],
-  'joinville': [-26.3045, -48.8487], 'blumenau': [-26.9194, -49.0661], 'itajai': [-26.9078, -48.6619],
-  'chapeco': [-27.1004, -52.6152], 'lages': [-27.8106, -50.3262], 'criciuma': [-28.6773, -49.3704],
-  'tubarao': [-28.4709, -49.0045], 'balneario camboriu': [-26.9905, -48.6347], 'joacaba': [-27.1751, -51.5034],
-  'biguacu': [-27.4952, -48.6558], 'concordia': [-27.2312, -52.0255], 'rio do sul': [-27.2144, -49.6433],
-  'jaragua do sul': [-26.4842, -49.0706], 'brusque': [-27.0984, -48.9103], 'cacador': [-26.7750, -51.0130],
-  'oeste': [-27.1004, -52.6152], 'serra': [-27.8106, -50.3262], 'norte': [-26.3045, -48.8487], 'sul': [-28.6773, -49.3704], 'vale': [-26.9194, -49.0661]
-};
-
-const FLORIPA_COORDS = {
-  'centro': [-27.5954, -48.5480], 
-  'norte': [-27.4355, -48.4516], 
-  'sul': [-27.7247, -48.5135], 
-  'leste': [-27.6041, -48.4613], 
-  'continente': [-27.5843, -48.5786], 
-  'itacorubi': [-27.5845, -48.5100],
+// Polígonos nativos para as Regiões de Florianópolis (Mapeamento de Fronteiras)
+const FLORIPA_POLYGONS = {
+  'norte': [[-27.38, -48.45], [-27.46, -48.38], [-27.50, -48.48], [-27.45, -48.52]],
+  'centro': [[-27.57, -48.56], [-27.57, -48.50], [-27.62, -48.50], [-27.62, -48.56]],
+  'sul': [[-27.62, -48.50], [-27.62, -48.47], [-27.75, -48.48], [-27.75, -48.56]],
+  'leste': [[-27.50, -48.48], [-27.50, -48.42], [-27.62, -48.47], [-27.62, -48.50]],
+  'continente': [[-27.57, -48.62], [-27.57, -48.57], [-27.62, -48.57], [-27.62, -48.62]]
 };
 
 const formatDate = (dateString) => {
@@ -65,6 +54,8 @@ const normalizeData = (data) => {
     const newItem = { id: item.id };
     const keys = Object.keys(item);
     keys.forEach(k => { newItem[k] = item[k]; });
+    
+    // Varredura flexível de colunas
     keys.forEach(k => {
       if (k === 'id') return;
       const normK = normalizerFilter(k);
@@ -81,6 +72,7 @@ const normalizeData = (data) => {
       if (normK === 'status') newItem['STATUS'] = item[k];
     });
 
+    // Limpeza de erros do sheets
     Object.keys(newItem).forEach(k => {
       if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) {
         newItem[k] = '';
@@ -155,68 +147,115 @@ const SimplePieChart = ({ data, title }) => {
   );
 };
 
-const GeographicMap = ({ data, title, isFloripa }) => {
+const ChoroplethMap = ({ data, title, isFloripa }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const geoJsonLayerRef = useRef(null);
+
+  const getMapColor = (value, maxVal) => {
+    if (!value || value === 0) return 'transparent';
+    const intensity = value / maxVal;
+    if (intensity > 0.6) return COLORS.crimson;
+    if (intensity > 0.3) return COLORS.mustard;
+    return COLORS.teal;
+  };
 
   useEffect(() => {
     let isMounted = true;
 
-    const initMap = () => {
+    const initMap = async () => {
       if (!mapRef.current || !window.L || !isMounted) return;
 
       if (!mapInstanceRef.current) {
         const mapCenter = isFloripa ? [-27.5954, -48.5480] : [-27.2730, -50.4906];
-        const mapZoom = isFloripa ? 10 : 6; // Ajuste de zoom para mostrar tudo
+        const mapZoom = isFloripa ? 10 : 6;
         
         mapInstanceRef.current = window.L.map(mapRef.current, { scrollWheelZoom: false }).setView(mapCenter, mapZoom);
         
-        // Estilo limpo do mapa base
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; OpenStreetMap'
         }).addTo(mapInstanceRef.current);
       }
 
-      // Limpa camadas velhas (em caso de refiltro)
-      mapInstanceRef.current.eachLayer((layer) => {
-        if (layer instanceof window.L.CircleMarker) {
-          mapInstanceRef.current.removeLayer(layer);
-        }
-      });
-
-      const coordsDict = isFloripa ? FLORIPA_COORDS : SC_COORDS;
+      const map = mapInstanceRef.current;
       const maxVal = Math.max(...data.map(d => d.value), 1);
 
-      data.forEach(item => {
-        const locationNorm = normalizerFilter(item.name);
-        
-        // Lógica inteligente: Procura correspondência parcial (ex: "Florianópolis (Sul)" -> acha "sul")
-        let coords = coordsDict[locationNorm];
-        if (!coords) {
-          const foundKey = Object.keys(coordsDict).find(k => locationNorm.includes(k));
-          if (foundKey) coords = coordsDict[foundKey];
-        }
+      // Limpa camadas antigas
+      if (geoJsonLayerRef.current) {
+        map.removeLayer(geoJsonLayerRef.current);
+      }
+      
+      geoJsonLayerRef.current = window.L.layerGroup().addTo(map);
 
-        if (coords) {
-          const radius = 12 + ((item.value / maxVal) * 25);
-          const marker = window.L.circleMarker(coords, {
-            radius: radius,
-            fillColor: "#C1272D",
-            color: "#111111",
-            weight: 3,
-            fillOpacity: 0.9
-          }).addTo(mapInstanceRef.current);
+      if (!isFloripa) {
+        // MAPA DE SANTA CATARINA: Borda exata dos municípios usando GeoJSON do IBGE/Github
+        try {
+          const res = await fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json');
+          const geoData = await res.json();
           
-          marker.bindTooltip(`
-            <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
-              ${item.name}: ${item.value}
-            </div>
-          `, { direction: 'top', className: 'custom-leaflet-tooltip' });
+          if (!isMounted) return;
+
+          const geoLayer = window.L.geoJSON(geoData, {
+            style: (feature) => {
+              const munName = normalizerFilter(feature.properties.name);
+              const found = data.find(d => normalizerFilter(d.name) === munName);
+              const val = found ? found.value : 0;
+              return {
+                fillColor: getMapColor(val, maxVal),
+                weight: val > 0 ? 2 : 1,
+                opacity: 1,
+                color: val > 0 ? COLORS.black : '#cccccc',
+                fillOpacity: val > 0 ? 0.9 : 0.1
+              };
+            },
+            onEachFeature: (feature, layer) => {
+              const munName = normalizerFilter(feature.properties.name);
+              const found = data.find(d => normalizerFilter(d.name) === munName);
+              if (found) {
+                layer.bindTooltip(`
+                  <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
+                    ${feature.properties.name}: ${found.value}
+                  </div>
+                `, { direction: 'top', className: 'custom-leaflet-tooltip' });
+              }
+            }
+          });
+          geoJsonLayerRef.current.addLayer(geoLayer);
+        } catch (e) {
+          console.error("Erro ao carregar GeoJSON de SC", e);
         }
-      });
+      } else {
+        // MAPA DE FLORIANÓPOLIS: Zonas/Fronteiras definidas desenhadas via Polígonos
+        data.forEach(item => {
+          const regName = normalizerFilter(item.name);
+          let polygonCoords = null;
+          
+          if (regName.includes('norte')) polygonCoords = FLORIPA_POLYGONS['norte'];
+          else if (regName.includes('sul')) polygonCoords = FLORIPA_POLYGONS['sul'];
+          else if (regName.includes('leste')) polygonCoords = FLORIPA_POLYGONS['leste'];
+          else if (regName.includes('continente')) polygonCoords = FLORIPA_POLYGONS['continente'];
+          else if (regName.includes('centro')) polygonCoords = FLORIPA_POLYGONS['centro'];
+
+          if (polygonCoords) {
+            const polygon = window.L.polygon(polygonCoords, {
+              fillColor: getMapColor(item.value, maxVal),
+              weight: 3,
+              color: COLORS.black,
+              fillOpacity: 0.9
+            });
+            
+            polygon.bindTooltip(`
+              <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
+                ${item.name}: ${item.value}
+              </div>
+            `, { direction: 'center', className: 'custom-leaflet-tooltip' });
+            
+            geoJsonLayerRef.current.addLayer(polygon);
+          }
+        });
+      }
     };
 
-    // Injeção limpa da biblioteca sem precisar de NPM install
     if (!window.L) {
       const css = document.createElement('link');
       css.rel = 'stylesheet';
@@ -231,19 +270,13 @@ const GeographicMap = ({ data, title, isFloripa }) => {
       initMap();
     }
 
-    return () => {
-      isMounted = false;
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
+    return () => { isMounted = false; };
   }, [data, isFloripa]);
 
   return (
-    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full relative col-span-1 md:col-span-full">
+    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full relative">
       <h3 className="text-[12px] font-black text-[#111111] mb-2 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2">{title}</h3>
-      <p className="text-[9px] font-black text-[#111111] opacity-60 uppercase tracking-widest mb-4">Intensidade geográfica</p>
+      <p className="text-[9px] font-black text-[#111111] opacity-60 uppercase tracking-widest mb-4">Mapa Coroplético (Fronteiras)</p>
       
       <div className="w-full h-96 border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
         {data.length === 0 ? (
@@ -261,7 +294,7 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // FILTROS GLOBAIS
+  // Filtros Globais (Afetam Lista e Dashboard)
   const [search, setSearch] = useState('');
   const [timeFilter, setTimeFilter] = useState('all');
   const [municipioFilter, setMunicipioFilter] = useState('all');
@@ -328,7 +361,7 @@ export default function App() {
         let val = ev[key];
         if (!val || val.toString().trim() === '') return;
         const norm = normalizerFilter(val);
-        // Regra Estrita: Bloqueia lixo e "Outros Eventos"
+        // Regra Estrita: Bloqueia lixo ("Outros Eventos" e "Não Definido")
         if (norm === 'outros eventos' || norm === 'nao definido') return;
         counts[val] = (counts[val] || 0) + 1;
       });
@@ -342,11 +375,11 @@ export default function App() {
       { name: 'Futuras', value: futureCount }
     ].filter(s => s.value > 0);
 
-    const scHeatmap = agg('Município'); // I
+    const scHeatmap = agg('Município'); // COLUNA I
     const floripaHeatmapMap = {};
     filteredEvents.forEach(ev => {
       if (normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa')) {
-        const reg = ev['Região']; // H
+        const reg = ev['Região']; // COLUNA H para Floripa
         if (reg && normalizerFilter(reg) !== 'nao definido') {
           floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
         }
@@ -380,11 +413,11 @@ export default function App() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <select value={municipioFilter} onChange={(e) => setMunicipioFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODOS MUNICÍPIOS (Col I)</option>
+          <option value="all">TODOS MUNICÍPIOS (COL I)</option>
           {filterOptions.municipios.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={regiaoFilter} onChange={(e) => setRegiaoFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODAS REGIÕES (Col H)</option>
+          <option value="all">TODAS REGIÕES (COL H)</option>
           {filterOptions.regioes.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={articuladorFilter} onChange={(e) => setArticuladorFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
@@ -414,10 +447,9 @@ export default function App() {
         <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Atividades (Tempo)" /></div>
       </div>
 
-      {/* Mapas 100% da Largura da Tela em Linhas Separadas para maior destaque */}
       <div className="grid grid-cols-1 gap-8 mt-8">
-        <GeographicMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina (Col I)" isFloripa={false} />
-        <GeographicMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis (Col H)" isFloripa={true} />
+        <ChoroplethMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina (Col I)" isFloripa={false} />
+        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis (Col H)" isFloripa={true} />
       </div>
     </div>
   );
@@ -447,7 +479,6 @@ export default function App() {
                   
                   <h3 className="font-black text-lg text-[#111111] leading-tight mb-4 uppercase line-clamp-3">{ev['Título']}</h3>
                   
-                  {/* Substituição de SVGs por Emojis para garantir alinhamento limpo */}
                   <div className="mt-auto space-y-2 border-t-[3px] border-[#111111] pt-3">
                     <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-1.5"><span className="text-lg leading-none">📅</span> {formatDate(ev['Início'])}</p>
                     <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-1.5"><span className="text-lg leading-none">📍</span> {ev['Município']} {ev['Região'] ? `- ${ev['Região']}` : ''}</p>
@@ -503,7 +534,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* MENSAGEM ORIGINAL DA PLANILHA RESTAURADA E ESTILIZADA */}
         <div className="mt-auto hidden md:block p-6">
           <div className="bg-[#Fdfcf0] border-[4px] border-[#111111] p-4 shadow-[4px_4px_0px_0px_#111111]">
             <p className="text-[9px] text-[#111111] font-black uppercase leading-relaxed mb-2 border-b-[2px] border-[#111111] pb-2">Conexão Sheets</p>
@@ -517,7 +547,6 @@ export default function App() {
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative z-0">
         {loading ? (
-          // CARREGAMENTO ORIGINAL QUADRADO MONDRIAN RESTAURADO
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#Fdfcf0] z-10 gap-6">
             <div className="w-16 h-16 bg-[#EAA221] border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] animate-spin"></div>
             <div className="font-black uppercase tracking-widest text-[#111111] text-lg bg-[#ffffff] px-4 py-2 border-[4px] border-[#111111]">Carregando Dados...</div>
