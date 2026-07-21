@@ -26,15 +26,12 @@ const COLORS = {
 const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal, COLORS.crimsonDark, COLORS.mustardDark, COLORS.tealDark];
 
 const MOCK_DATA = [
-  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC', 'Classe de Atividade': 'Sessão Legislativa', 'Região': 'Grande Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
-  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Saneamento básico.', 'Duração': 120, 'Local': 'Campeche', 'Classe de Atividade': 'Comunidade', 'Região': 'Sul da Ilha', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
-  { id: 4, 'Título': 'Visita Feira', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 165600000).toISOString(), 'Descrição': 'Apoio local.', 'Duração': 120, 'Local': 'Chapecó', 'Classe de Atividade': 'Visita Técnica', 'Região': 'Oeste', 'Articulador': 'Pedro Alves', 'STATUS': 'Realizado' },
-  { id: 5, 'Título': 'Evento Genérico', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Nada', 'Duração': 120, 'Local': '', 'Classe de Atividade': 'Outros Eventos', 'Região': 'Não definido', 'Articulador': 'Não definido', 'STATUS': 'Confirmado' },
+  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC', 'Classe de Atividade': 'Sessão Legislativa', 'Região': 'Centro', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
+  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Campeche', 'Classe de Atividade': 'Comunidade', 'Região': 'Sul da Ilha', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
+  { id: 4, 'Título': 'Visita Feira', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 165600000).toISOString(), 'Descrição': 'Apoio local.', 'Duração': 120, 'Local': 'Chapecó', 'Classe de Atividade': 'Visita Técnica', 'Região': 'Oeste', 'Município': 'Chapecó', 'Articulador': 'Pedro Alves', 'STATUS': 'Realizado' },
+  { id: 5, 'Título': 'Encontro Lages', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Frio.', 'Duração': 120, 'Local': 'Centro', 'Classe de Atividade': 'Reunião', 'Região': 'Serra', 'Município': 'Lages', 'Articulador': 'Marquito', 'STATUS': 'Confirmado' },
 ];
 
-// ==========================================
-// FUNÇÕES AUXILIARES E NORMALIZAÇÃO
-// ==========================================
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -56,6 +53,7 @@ const normalizeData = (data) => {
     
     keys.forEach(k => { newItem[k] = item[k]; });
     
+    // Varredura para encontrar colunas idependente de erros de digitação na primeira linha
     keys.forEach(k => {
       if (k === 'id') return;
       const normK = normalizerFilter(k);
@@ -66,12 +64,14 @@ const normalizeData = (data) => {
       if (normK.includes('descri')) newItem['Descrição'] = item[k];
       if (normK.includes('duracao')) newItem['Duração'] = item[k];
       if (normK.includes('local')) newItem['Local'] = item[k];
-      if (normK.includes('classe') || normK.includes('tipo')) newItem['Classe de Atividade'] = item[k];
-      if (normK.includes('regiao')) newItem['Região'] = item[k];
+      if (normK === 'classe' || normK.includes('atividade')) newItem['Classe de Atividade'] = item[k];
+      if (normK === 'regiao') newItem['Região'] = item[k];
+      if (normK === 'municipio') newItem['Município'] = item[k];
       if (normK.includes('articulador') || normK.includes('responsavel')) newItem['Articulador'] = item[k];
       if (normK === 'status') newItem['STATUS'] = item[k];
     });
 
+    // Limpa os erros de fórmula gerados pelo Google Sheets
     Object.keys(newItem).forEach(k => {
       if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) {
         newItem[k] = '';
@@ -88,13 +88,13 @@ const normalizeData = (data) => {
 const SimpleBarChart = ({ data, title }) => {
   const maxVal = Math.max(...data.map(d => d.value), 1);
   return (
-    <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px]">
+    <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px] flex flex-col h-full">
       <h3 className="text-sm font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2">{title}</h3>
-      <div className="space-y-4">
+      <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-[300px]">
         {data.length === 0 && <div className="text-xs font-black text-gray-400 uppercase text-center py-4">Sem dados válidos</div>}
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
-            <span className="text-[10px] font-black text-[#111111] w-28 uppercase truncate" title={item.name}>{item.name}</span>
+            <span className="text-[10px] font-black text-[#111111] w-32 uppercase truncate" title={item.name}>{item.name}</span>
             <div className="flex-1 h-6 bg-white border-[2px] border-[#111111] overflow-hidden relative">
               <div 
                 className="h-full border-r-[2px] border-[#111111] transition-all duration-500" 
@@ -120,14 +120,14 @@ const SimplePieChart = ({ data, title }) => {
   };
 
   return (
-    <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px] flex flex-col items-center">
+    <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px] flex flex-col items-center h-full">
       <h3 className="text-sm font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
       
       {data.length === 0 ? (
          <div className="flex-1 flex items-center justify-center text-xs font-black text-gray-400 uppercase py-10">Sem dados válidos</div>
       ) : (
         <>
-          <div className="relative w-40 h-40">
+          <div className="relative w-40 h-40 flex-shrink-0">
             <svg viewBox="-1.1 -1.1 2.2 2.2" className="transform -rotate-90 w-full h-full drop-shadow-[4px_4px_0px_#111111]">
               <circle cx="0" cy="0" r="1.05" fill="#111111" />
               {data.map((slice, i) => {
@@ -160,10 +160,10 @@ const SimplePieChart = ({ data, title }) => {
               })}
             </svg>
           </div>
-          <div className="mt-8 w-full flex flex-wrap gap-2 justify-center">
+          <div className="mt-8 w-full flex flex-wrap gap-2 justify-center overflow-y-auto max-h-[150px] custom-scrollbar">
             {data.map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-[10px] font-black text-[#111111] bg-white border-[2px] border-[#111111] px-2 py-1 shadow-[2px_2px_0px_0px_#111111] uppercase">
-                <span className="w-3 h-3 border-[2px] border-[#111111]" style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}></span>
+                <span className="w-3 h-3 border-[2px] border-[#111111] block" style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}></span>
                 {item.name} ({(item.value / total * 100).toFixed(0)}%)
               </div>
             ))}
@@ -175,37 +175,43 @@ const SimplePieChart = ({ data, title }) => {
 };
 
 // ==========================================
-// MAPA NATIVO GEOGRÁFICO (SVG PURO)
+// MAPA NATIVO GEOGRÁFICO (SVG PURO COORDENADAS)
 // ==========================================
 const NativeGeoMap = ({ data, title, isFloripa }) => {
-  // Mapeamento de coordenadas (0% a 100% relativo à viewBox 0 0 100 100)
-  const regionsCoords = {
-    sc: {
-      'oeste': { x: 15, y: 60 },
-      'meio-oeste': { x: 35, y: 55 },
-      'planalto': { x: 55, y: 45 },
-      'norte': { x: 75, y: 35 },
-      'vale': { x: 75, y: 55 },
-      'grande florianopolis': { x: 85, y: 62 },
-      'serra': { x: 55, y: 70 },
-      'sul': { x: 75, y: 78 }
-    },
-    floripa: {
-      'norte da ilha': { x: 60, y: 25 },
-      'centro': { x: 48, y: 50 },
-      'continente': { x: 28, y: 50 },
-      'leste da ilha': { x: 68, y: 50 },
-      'sul da ilha': { x: 55, y: 80 }
-    }
+  
+  // Dicionário de Coordenadas X,Y relativas à ViewBox 0 0 100 100
+  // Santa Catarina (Baseado em Municípios e Macrorregiões)
+  const scMapCoords = {
+    'florianopolis': { x: 78, y: 55 }, 'sao jose': { x: 75, y: 55 }, 'palhoca': { x: 75, y: 58 },
+    'joinville': { x: 72, y: 22 }, 'blumenau': { x: 68, y: 40 }, 'itajai': { x: 75, y: 38 },
+    'chapeco': { x: 18, y: 48 }, 'lages': { x: 50, y: 62 }, 'criciuma': { x: 68, y: 82 },
+    'tubarao': { x: 70, y: 76 }, 'balneario camboriu': { x: 76, y: 42 }, 'joacaba': { x: 35, y: 48 },
+    'concordia': { x: 28, y: 55 }, 'xanxere': { x: 22, y: 46 }, 'rio do sul': { x: 55, y: 48 },
+    'cacador': { x: 45, y: 35 }, 'canoinhas': { x: 55, y: 20 }, 'mafra': { x: 62, y: 20 },
+    'sao francisco do sul': { x: 78, y: 25 }, 'laguna': { x: 72, y: 72 }, 'imbituba': { x: 74, y: 68 },
+    'garopaba': { x: 75, y: 64 }, 'jaragua do sul': { x: 68, y: 28 }, 'brusque': { x: 70, y: 45 },
+    'sao miguel do oeste': { x: 8, y: 40 }, 'ararangua': { x: 65, y: 88 }, 'biguacu': { x: 74, y: 51 },
+    'curitibanos': { x: 48, y: 46 }, 'videira': { x: 40, y: 40 }, 'gaspar': { x: 70, y: 40 },
+    // Fallbacks para Macro-regiões SC
+    'oeste': { x: 20, y: 48 }, 'meio-oeste': { x: 38, y: 45 }, 'planalto': { x: 50, y: 55 },
+    'norte': { x: 68, y: 25 }, 'vale': { x: 68, y: 42 }, 'grande florianopolis': { x: 75, y: 55 },
+    'serra': { x: 55, y: 65 }, 'sul': { x: 68, y: 80 }
   };
 
-  const currentMap = isFloripa ? regionsCoords.floripa : regionsCoords.sc;
+  // Florianópolis (Baseado em Regiões do Município)
+  const floripaMapCoords = {
+    'norte da ilha': { x: 65, y: 25 }, 'centro': { x: 55, y: 55 },
+    'continente': { x: 30, y: 55 }, 'leste da ilha': { x: 75, y: 50 },
+    'sul da ilha': { x: 60, y: 80 }
+  };
+
+  const currentMapCoords = isFloripa ? floripaMapCoords : scMapCoords;
   const maxDensity = Math.max(...data.map(d => d.value), 1);
 
-  // Silhuetas geográficas reais simplificadas em SVG
-  const scPath = "M 10,40 L 25,35 L 45,30 L 60,25 L 75,25 L 85,30 L 90,40 L 88,55 L 85,65 L 80,75 L 75,90 L 60,85 L 50,85 L 40,95 L 30,85 L 15,85 L 5,90 Z";
-  const floripaIslandPath = "M 45,25 L 55,15 L 70,20 L 80,40 L 75,60 L 65,90 L 55,100 L 45,90 L 35,65 L 42,45 Z";
-  const floripaContinentPath = "M 15,40 L 30,35 L 40,45 L 35,60 L 25,65 L 15,60 Z";
+  // Formas Poligonais Desenhadas Manualmente (Mondrian Style)
+  const scPolygon = "M 5,45 C 15,35 30,35 45,25 C 50,20 65,15 75,20 C 85,25 90,45 85,60 C 80,75 70,85 60,95 C 45,95 30,85 15,65 C 10,55 5,50 5,45 Z";
+  const floripaContinentPolygon = "M 20,40 C 35,35 45,45 40,65 C 30,70 15,65 20,40 Z";
+  const floripaIslandPolygon = "M 50,15 C 70,25 80,45 75,70 C 70,95 55,90 45,65 C 40,40 45,20 50,15 Z";
 
   return (
     <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px]">
@@ -214,34 +220,33 @@ const NativeGeoMap = ({ data, title, isFloripa }) => {
       
       <div className="w-full h-64 bg-white border-[3px] border-[#111111] relative overflow-hidden flex items-center justify-center">
         
-        {/* Fundo do Mapa Geográfico */}
-        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full p-4 drop-shadow-[6px_6px_0px_#111111]">
+        {/* Fundo do Mapa Geográfico SVG */}
+        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full p-2 drop-shadow-[6px_6px_0px_#111111]">
           {isFloripa ? (
             <>
-              <path d={floripaContinentPath} fill="#007D8A" stroke="#111111" strokeWidth="1.5" strokeLinejoin="round" />
-              <path d={floripaIslandPath} fill="#007D8A" stroke="#111111" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d={floripaContinentPolygon} fill="#007D8A" stroke="#111111" strokeWidth="1.5" strokeLinejoin="round" opacity="0.3" />
+              <path d={floripaIslandPolygon} fill="#007D8A" stroke="#111111" strokeWidth="1.5" strokeLinejoin="round" opacity="0.3" />
             </>
           ) : (
-             <path d={scPath} fill="#EAA221" stroke="#111111" strokeWidth="1.5" strokeLinejoin="round" />
+             <path d={scPolygon} fill="#EAA221" stroke="#111111" strokeWidth="1.5" strokeLinejoin="round" opacity="0.4" />
           )}
         </svg>
 
-        {/* Pontos de Calor */}
         {data.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-10">
-            <span className="text-[10px] font-black uppercase text-gray-500 bg-white px-3 py-1 border-[2px] border-[#111111]">Sem agendas na região</span>
+            <span className="text-[10px] font-black uppercase text-[#111111] bg-white px-3 py-1 border-[2px] border-[#111111] shadow-[2px_2px_0px_0px_#111111]">Sem agendas na região</span>
           </div>
         )}
 
+        {/* Bolhas de Calor Renderizadas via Coordenadas */}
         {data.map((item, i) => {
           const normName = normalizerFilter(item.name);
-          const coordKey = Object.keys(currentMap).find(k => normName.includes(k));
-          const coord = coordKey ? currentMap[coordKey] : null;
-          
+          // Busca a coordenada exata baseada na String limpa
+          const coord = currentMapCoords[normName];
           if (!coord) return null;
 
           const intensity = item.value / maxDensity;
-          const size = 20 + (intensity * 35); // Bolhas de 20px a 55px
+          const size = 15 + (intensity * 40); // Bolhas de 15px a 55px
 
           return (
             <div 
@@ -250,12 +255,12 @@ const NativeGeoMap = ({ data, title, isFloripa }) => {
               style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
             >
               <div 
-                className="rounded-full bg-[#C1272D] border-[3px] border-[#111111] shadow-[3px_3px_0px_0px_#111111] transition-all duration-300 hover:scale-110 flex items-center justify-center"
+                className="rounded-full bg-[#C1272D] border-[3px] border-[#111111] shadow-[3px_3px_0px_0px_#111111] transition-all duration-300 hover:scale-125 flex items-center justify-center cursor-help relative"
                 style={{ width: `${size}px`, height: `${size}px`, opacity: 0.85 + (intensity * 0.15) }}
               >
-                <span className="text-white font-black text-[12px]">{item.value}</span>
+                <span className="text-white font-black text-[10px]">{item.value}</span>
               </div>
-              <span className="mt-1 text-[8px] font-black uppercase text-[#111111] bg-white border-[2px] border-[#111111] px-1.5 py-0.5 whitespace-nowrap shadow-[2px_2px_0px_0px_#111111]">
+              <span className="absolute top-full mt-1 text-[8px] font-black uppercase text-[#111111] bg-white border-[2px] border-[#111111] px-1.5 py-0.5 whitespace-nowrap shadow-[2px_2px_0px_0px_#111111] z-20 hidden group-hover:block pointer-events-none">
                 {item.name}
               </span>
             </div>
@@ -270,7 +275,7 @@ const NativeGeoMap = ({ data, title, isFloripa }) => {
 // APLICATIVO PRINCIPAL
 // ==========================================
 export default function App() {
-  const [activeTab, setActiveTab] = useState('list'); // LISTA (Agendas) É O PADRÃO AGORA
+  const [activeTab, setActiveTab] = useState('list'); 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -317,9 +322,7 @@ export default function App() {
           body: JSON.stringify({ id, status: newStatus }),
           redirect: "follow"
         });
-      } catch (error) {
-        console.error("Erro ao atualizar status:", error);
-      }
+      } catch (error) {}
     }
   };
 
@@ -333,7 +336,7 @@ export default function App() {
         return (
           (ev['Título'] && ev['Título'].toLowerCase().includes(term)) ||
           (ev['Local'] && ev['Local'].toLowerCase().includes(term)) ||
-          (ev['Descrição'] && ev['Descrição'].toLowerCase().includes(term)) ||
+          (ev['Município'] && ev['Município'].toLowerCase().includes(term)) ||
           (ev['Articulador'] && ev['Articulador'].toLowerCase().includes(term))
         );
       }
@@ -346,36 +349,52 @@ export default function App() {
       const counts = {};
       events.forEach(ev => {
         let val = ev[key];
-        if (!val || val.toString().trim() === '') {
-          val = 'Não definido';
-        }
+        if (!val || val.toString().trim() === '') val = 'Não definido';
         counts[val] = (counts[val] || 0) + 1;
       });
       return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     };
 
-    // Bloqueia 'Outros Eventos' e 'Não definido'
+    // Filtros estritos: Remove 'Outros Eventos' e 'Não definido'
     const classes = agg('Classe de Atividade').filter(c => 
-      normalizerFilter(c.name) !== 'outros eventos' && 
-      normalizerFilter(c.name) !== 'nao definido'
+      normalizerFilter(c.name) !== 'outros eventos' && normalizerFilter(c.name) !== 'nao definido'
     );
 
     const articuladores = agg('Articulador').filter(a => 
       normalizerFilter(a.name) !== 'nao definido'
     );
 
-    const todasRegioes = agg('Região').filter(r => 
+    const regioes = agg('Região').filter(r => 
       normalizerFilter(r.name) !== 'nao definido'
     );
-    
-    // Separação Inteligente SC vs Floripa
-    const floripaKeys = ['norte da', 'sul da', 'leste da', 'centro', 'continente'];
-    const floripaRegioes = todasRegioes.filter(r => 
-      floripaKeys.some(k => normalizerFilter(r.name).includes(k))
-    );
-    const scRegioes = todasRegioes.filter(r => !floripaRegioes.includes(r));
 
-    return { classes, regioes: todasRegioes, articuladores, scHeatmap: scRegioes, floripaHeatmap: floripaRegioes };
+    // Lógica do Mapa de Santa Catarina (Baseado APENAS na Coluna I - Município)
+    const scHeatmapMap = {};
+    events.forEach(ev => {
+      let muni = ev['Município'];
+      if (!muni || muni.toString().trim() === '') {
+        muni = ev['Região']; // Fallback pra Macro-Região se Município estiver em branco
+      }
+      if (muni && normalizerFilter(muni) !== 'nao definido') {
+        scHeatmapMap[muni] = (scHeatmapMap[muni] || 0) + 1;
+      }
+    });
+    const scHeatmap = Object.entries(scHeatmapMap).map(([name, value]) => ({ name, value }));
+
+    // Lógica do Mapa de Florianópolis (Baseado APENAS na Coluna H - Região, filtrado onde Município é Floripa)
+    const floripaHeatmapMap = {};
+    events.forEach(ev => {
+      const muni = normalizerFilter(ev['Município'] || '');
+      if (muni === 'florianopolis' || muni === 'floripa') {
+        const reg = ev['Região'];
+        if (reg && normalizerFilter(reg) !== 'nao definido') {
+          floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
+        }
+      }
+    });
+    const floripaHeatmap = Object.entries(floripaHeatmapMap).map(([name, value]) => ({ name, value }));
+
+    return { classes, regioes, articuladores, scHeatmap, floripaHeatmap };
   }, [events]);
 
   const renderDashboard = () => (
@@ -465,8 +484,8 @@ export default function App() {
                          </div>
                       </div>
                       <div className="text-[10px] sm:text-xs font-black text-gray-800 uppercase flex items-center gap-2 truncate">
-                         <span className="w-2 h-2 bg-gray-400 inline-block"></span>
-                         {ev['Local'] || ev['Região']}
+                         <span className="w-2 h-2 bg-[#C1272D] inline-block"></span>
+                         {ev['Município']} {ev['Região'] ? `- ${ev['Região']}` : ''}
                       </div>
                     </div>
 
@@ -485,7 +504,7 @@ export default function App() {
                     <tr>
                       <th className="px-5 py-4 font-black border-b-[3px] border-white">Título</th>
                       <th className="px-5 py-4 font-black border-b-[3px] border-white">Data</th>
-                      <th className="px-5 py-4 font-black border-b-[3px] border-white">Local</th>
+                      <th className="px-5 py-4 font-black border-b-[3px] border-white">Município/Região</th>
                       <th className="px-5 py-4 font-black border-b-[3px] border-white">Status</th>
                     </tr>
                   </thead>
@@ -494,7 +513,7 @@ export default function App() {
                       <tr key={i} onClick={() => setSelectedEvent(ev)} className="bg-white border-b-[3px] border-[#111111] hover:bg-[#Fdfcf0] cursor-pointer transition-colors">
                         <td className="px-5 py-4 font-black text-[#111111] uppercase max-w-[250px] truncate">{ev['Título']}</td>
                         <td className="px-5 py-4 font-bold text-gray-700 whitespace-nowrap">{formatDate(ev['Início'])}</td>
-                        <td className="px-5 py-4 font-bold text-gray-700 truncate max-w-[200px]">{ev['Local'] || ev['Região']}</td>
+                        <td className="px-5 py-4 font-bold text-[#C1272D] truncate max-w-[200px]">{ev['Município']} {ev['Região'] ? `/ ${ev['Região']}` : ''}</td>
                         <td className="px-5 py-4">
                           <span className="text-[10px] font-black px-2 py-1 border-[2px] border-[#111111] uppercase shadow-[2px_2px_0px_0px_#111111]" style={{ backgroundColor: ev['STATUS'] === 'Confirmado' ? COLORS.teal : COLORS.mustard, color: ev['STATUS'] === 'Confirmado' ? 'white' : '#111111' }}>
                             {ev['STATUS'] || 'Pendente'}
@@ -525,7 +544,7 @@ export default function App() {
               </div>
               <h2 className="text-2xl font-black text-[#111111] leading-none uppercase">{selectedEvent['Título']}</h2>
             </div>
-            <button onClick={() => setSelectedEvent(null)} className="p-2 bg-[#C1272D] text-white border-[3px] border-[#111111] hover:bg-[#8B1C20] hover:-translate-y-0.5 transition-transform shadow-[3px_3px_0px_0px_#111111]">
+            <button onClick={() => setSelectedEvent(null)} className="p-2 bg-[#C1272D] text-white border-[3px] border-[#111111] hover:bg-[#8B1C20] hover:-translate-y-0.5 transition-transform shadow-[3px_3px_0px_0px_#111111] flex-shrink-0">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="4" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
@@ -559,8 +578,8 @@ export default function App() {
 
             <div className="bg-white p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] space-y-5">
               <div>
-                <label className="text-[10px] uppercase font-black text-[#007D8A] tracking-widest block border-b-[3px] border-[#111111] pb-1 mb-2">Local</label>
-                <p className="text-sm font-bold text-[#111111] uppercase">{selectedEvent['Local'] || 'NÃO ESPECIFICADO'}</p>
+                <label className="text-[10px] uppercase font-black text-[#007D8A] tracking-widest block border-b-[3px] border-[#111111] pb-1 mb-2">Município / Local</label>
+                <p className="text-sm font-bold text-[#111111] uppercase">{selectedEvent['Município'] || 'NÃO DEFINIDO'} <span className="text-gray-400 font-medium">| {selectedEvent['Local'] || 'S/ LOCAL'}</span></p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -597,7 +616,6 @@ export default function App() {
           <p className="text-[10px] text-white font-black uppercase tracking-widest mt-2 bg-[#111111] px-2 py-1 inline-block border-[2px] border-white">GesTaAg • Marquito</p>
         </div>
         
-        {/* BOTÃO DE AGENDAS COMO PRIMEIRO */}
         <div className="flex flex-row md:flex-col p-4 gap-4 overflow-x-auto">
           <button 
             onClick={() => setActiveTab('list')}
@@ -648,6 +666,9 @@ export default function App() {
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         * { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #Fdfcf0; border-left: 2px solid #111111; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #111111; }
       `}} />
     </div>
   );
