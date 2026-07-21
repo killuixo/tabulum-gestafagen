@@ -19,22 +19,40 @@ const COLORS = {
 };
 const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal];
 
-const MOCK_DATA = [
-  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'Plenário Osni Régis', 'Classe de Atividade': 'Sessão Legislativa', 'Região': 'Centro', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
-  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Sede do Campeche', 'Classe de Atividade': 'Comunidade', 'Região': 'Sul da Ilha', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
-  { id: 4, 'Título': 'Visita Feira', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 165600000).toISOString(), 'Descrição': 'Apoio local.', 'Duração': 120, 'Local': 'Praça Central', 'Classe de Atividade': 'Visita Técnica', 'Região': 'Oeste', 'Município': 'Chapecó', 'Articulador': 'Pedro Alves', 'STATUS': 'Realizado' },
-  { id: 5, 'Título': 'Encontro Lages', 'Início': new Date(Date.now() + 3600000).toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Frio.', 'Duração': 120, 'Local': 'Sindicato', 'Classe de Atividade': 'Reunião', 'Região': 'Serra', 'Município': 'Lages', 'Articulador': 'Marquito', 'STATUS': 'Confirmado' },
-  { id: 6, 'Título': 'Reunião Continente', 'Início': new Date(Date.now() + 9600000).toISOString(), 'Fim': new Date(Date.now() + 17200000).toISOString(), 'Descrição': 'Bairro.', 'Duração': 120, 'Local': 'Associação', 'Classe de Atividade': 'Comunidade', 'Região': 'Continente', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Pendente' },
-];
-
-// Polígonos nativos para as Regiões de Florianópolis (Mapeamento de Fronteiras)
+// ==========================================
+// POLÍGONOS CARTOGRÁFICOS - FLORIANÓPOLIS
+// Desenhados para respeitar a geografia real da Ilha e Continente
+// ==========================================
 const FLORIPA_POLYGONS = {
-  'norte': [[-27.38, -48.45], [-27.46, -48.38], [-27.50, -48.48], [-27.45, -48.52]],
-  'centro': [[-27.57, -48.56], [-27.57, -48.50], [-27.62, -48.50], [-27.62, -48.56]],
-  'sul': [[-27.62, -48.50], [-27.62, -48.47], [-27.75, -48.48], [-27.75, -48.56]],
-  'leste': [[-27.50, -48.48], [-27.50, -48.42], [-27.62, -48.47], [-27.62, -48.50]],
-  'continente': [[-27.57, -48.62], [-27.57, -48.57], [-27.62, -48.57], [-27.62, -48.62]]
+  'Norte da Ilha': [
+    [-27.39, -48.41], [-27.41, -48.37], [-27.44, -48.38], [-27.48, -48.40],
+    [-27.49, -48.45], [-27.48, -48.50], [-27.45, -48.53], [-27.42, -48.50]
+  ],
+  'Leste da Ilha': [
+    [-27.48, -48.40], [-27.53, -48.42], [-27.57, -48.43], [-27.62, -48.48],
+    [-27.60, -48.50], [-27.55, -48.47], [-27.49, -48.45]
+  ],
+  'Centro': [
+    [-27.49, -48.45], [-27.55, -48.47], [-27.60, -48.50], [-27.62, -48.53],
+    [-27.60, -48.56], [-27.55, -48.55], [-27.51, -48.52], [-27.48, -48.50]
+  ],
+  'Sul da Ilha': [
+    [-27.62, -48.48], [-27.68, -48.49], [-27.74, -48.51], [-27.78, -48.55],
+    [-27.72, -48.57], [-27.65, -48.56], [-27.62, -48.53], [-27.60, -48.50]
+  ],
+  'Continente': [
+    [-27.57, -48.57], [-27.59, -48.56], [-27.61, -48.57], [-27.62, -48.59],
+    [-27.60, -48.61], [-27.57, -48.60]
+  ]
 };
+
+const MOCK_DATA = [
+  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
+  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Campeche, Florianópolis', 'Classe de Atividade': 'Comunidade', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
+  { id: 4, 'Título': 'Visita Feira', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 165600000).toISOString(), 'Descrição': 'Apoio local.', 'Duração': 120, 'Local': 'Chapecó Centro', 'Classe de Atividade': 'Visita Técnica', 'Município': 'Chapecó', 'Articulador': 'Pedro Alves', 'STATUS': 'Realizado' },
+  { id: 5, 'Título': 'Encontro Lages', 'Início': new Date(Date.now() + 3600000).toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Frio.', 'Duração': 120, 'Local': 'Sindicato Lages', 'Classe de Atividade': 'Reunião', 'Município': 'Lages', 'Articulador': 'Marquito', 'STATUS': 'Confirmado' },
+  { id: 6, 'Título': 'Reunião Jurerê', 'Início': new Date(Date.now() + 9600000).toISOString(), 'Fim': new Date(Date.now() + 17200000).toISOString(), 'Descrição': 'Bairro.', 'Duração': 120, 'Local': 'Jurerê Internacional', 'Classe de Atividade': 'Comunidade', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Pendente' },
+];
 
 const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -49,13 +67,32 @@ const normalizerFilter = (str) => {
   return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
+// ==========================================
+// INTELIGÊNCIA GEOGRÁFICA (Baseado no Apoio)
+// Lê a Coluna F (Local) e encontra o distrito
+// ==========================================
+const getFloripaRegion = (evento) => {
+  const textToSearch = [
+    evento['Local'] || '', 
+    evento['Título'] || '', 
+    evento['Descrição'] || ''
+  ].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  if (textToSearch.match(/(norte da ilha|canasvieiras|ingleses|jurere|santo antonio|sambaqui|cacupe|ratones|vargem|ponta das canas|cachoeira do bom jesus|praia brava|daniela)/)) return 'Norte da Ilha';
+  if (textToSearch.match(/(sul da ilha|campeche|ribeirao|tapera|armacao|pantano|morro das pedras|carianos|caieira|solidao|naufragados)/)) return 'Sul da Ilha';
+  if (textToSearch.match(/(leste da ilha|lagoa da conceicao|barra da lagoa|rio vermelho|costa da lagoa|mocambique)/)) return 'Leste da Ilha';
+  if (textToSearch.match(/(continente|estreito|coqueiros|capoeiras|abraao|bom abrigo|itaguacu|jardim atlantico|monte cristo|balneario)/)) return 'Continente';
+  if (textToSearch.match(/(centro|agronomica|trindade|saco dos limoes|pantanal|itacorubi|santa monica|corrego|joao paulo|saco grande|monte verde|costeira|jose mendes|carvoeira|alesc|osni regis|alfandega|ufsc|udesc|cic|mpsc|pgj|gabinete|plenarinho|plenario|baia sul|beiramar|sessao ordinaria)/)) return 'Centro';
+
+  return 'Centro'; // Padrão se for em Floripa e não identificar o bairro
+};
+
 const normalizeData = (data) => {
   return data.map(item => {
     const newItem = { id: item.id };
     const keys = Object.keys(item);
     keys.forEach(k => { newItem[k] = item[k]; });
     
-    // Varredura flexível de colunas
     keys.forEach(k => {
       if (k === 'id') return;
       const normK = normalizerFilter(k);
@@ -66,17 +103,14 @@ const normalizeData = (data) => {
       if (normK.includes('duracao')) newItem['Duração'] = item[k];
       if (normK.includes('local')) newItem['Local'] = item[k];
       if (normK === 'classe' || normK.includes('atividade')) newItem['Classe de Atividade'] = item[k];
-      if (normK === 'regiao') newItem['Região'] = item[k];
       if (normK === 'municipio') newItem['Município'] = item[k];
+      if (normK === 'regiao') newItem['Região'] = item[k];
       if (normK.includes('articulador') || normK.includes('responsavel')) newItem['Articulador'] = item[k];
       if (normK === 'status') newItem['STATUS'] = item[k];
     });
 
-    // Limpeza de erros do sheets
     Object.keys(newItem).forEach(k => {
-      if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) {
-        newItem[k] = '';
-      }
+      if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) newItem[k] = '';
     });
     return newItem;
   });
@@ -90,7 +124,7 @@ const SimpleBarChart = ({ data, title }) => {
       <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-[300px]">
         {data.length === 0 && <div className="text-[10px] font-black text-[#111111] opacity-50 uppercase text-center py-4">Sem dados válidos</div>}
         {data.map((item, i) => (
-          <div key={i} className="flex items-center gap-3">
+          <div key={i} className="flex items-center gap-3 group">
             <span className="text-[10px] font-black text-[#111111] w-32 uppercase truncate" title={item.name}>{item.name}</span>
             <div className="flex-1 h-5 bg-[#Fdfcf0] border-[2px] border-[#111111] overflow-hidden relative">
               <div className="h-full border-r-[2px] border-[#111111] transition-all duration-500" style={{ width: `${(item.value / maxVal) * 100}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}></div>
@@ -152,7 +186,6 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
   const mapInstanceRef = useRef(null);
   const geoJsonLayerRef = useRef(null);
 
-  // Escala de cores progressiva com as 3 cores permitidas
   const getMapColor = (value, maxVal) => {
     if (!value || value === 0) return 'transparent';
     const intensity = value / maxVal;
@@ -168,13 +201,13 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
       if (!mapRef.current || !window.L || !isMounted) return;
 
       if (!mapInstanceRef.current) {
-        const mapCenter = isFloripa ? [-27.5954, -48.5480] : [-27.2730, -50.4906];
+        const mapCenter = isFloripa ? [-27.55, -48.50] : [-27.2730, -50.4906];
         const mapZoom = isFloripa ? 10 : 6;
         
         mapInstanceRef.current = window.L.map(mapRef.current, { scrollWheelZoom: false }).setView(mapCenter, mapZoom);
         
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap'
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
         }).addTo(mapInstanceRef.current);
       }
 
@@ -188,7 +221,7 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
       geoJsonLayerRef.current = window.L.layerGroup().addTo(map);
 
       if (!isFloripa) {
-        // MAPA DE SANTA CATARINA: Borda exata dos municípios com Tooltip
+        // Mapa de Santa Catarina via GeoJSON IBGE
         try {
           const res = await fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json');
           const geoData = await res.json();
@@ -225,17 +258,9 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
           console.error("Erro ao carregar GeoJSON de SC", e);
         }
       } else {
-        // MAPA DE FLORIANÓPOLIS: Zonas/Fronteiras definidas desenhadas com Tooltip
+        // Mapa de Florianópolis (Leitura Dinâmica)
         data.forEach(item => {
-          const regName = normalizerFilter(item.name);
-          let polygonCoords = null;
-          
-          if (regName.includes('norte')) polygonCoords = FLORIPA_POLYGONS['norte'];
-          else if (regName.includes('sul')) polygonCoords = FLORIPA_POLYGONS['sul'];
-          else if (regName.includes('leste')) polygonCoords = FLORIPA_POLYGONS['leste'];
-          else if (regName.includes('continente')) polygonCoords = FLORIPA_POLYGONS['continente'];
-          else if (regName.includes('centro')) polygonCoords = FLORIPA_POLYGONS['centro'];
-
+          const polygonCoords = FLORIPA_POLYGONS[item.name];
           if (polygonCoords) {
             const polygon = window.L.polygon(polygonCoords, {
               fillColor: getMapColor(item.value, maxVal),
@@ -277,7 +302,6 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
     <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full relative">
       <h3 className="text-[12px] font-black text-[#111111] mb-2 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2">{title}</h3>
       
-      {/* Legenda de Escala de Cores */}
       <div className="flex gap-4 mb-4">
         <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#007D8A] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Baixa</span></div>
         <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#EAA221] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Média</span></div>
@@ -300,11 +324,9 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Filtros Globais (Afetam Lista e Dashboard)
   const [search, setSearch] = useState('');
   const [timeFilter, setTimeFilter] = useState('all');
   const [municipioFilter, setMunicipioFilter] = useState('all');
-  const [regiaoFilter, setRegiaoFilter] = useState('all');
   const [articuladorFilter, setArticuladorFilter] = useState('all');
   const [classeFilter, setClasseFilter] = useState('all');
   
@@ -337,7 +359,6 @@ export default function App() {
     const getUnique = (key) => [...new Set(events.map(e => e[key]).filter(v => v && v.toString().trim() !== ''))].sort();
     return {
       municipios: getUnique('Município'),
-      regioes: getUnique('Região'),
       articuladores: getUnique('Articulador'),
       classes: getUnique('Classe de Atividade')
     };
@@ -348,7 +369,6 @@ export default function App() {
       if (timeFilter === 'future' && !isFuture(ev['Início'])) return false;
       if (timeFilter === 'past' && !isPast(ev['Início'])) return false;
       if (municipioFilter !== 'all' && ev['Município'] !== municipioFilter) return false;
-      if (regiaoFilter !== 'all' && ev['Região'] !== regiaoFilter) return false;
       if (articuladorFilter !== 'all' && ev['Articulador'] !== articuladorFilter) return false;
       if (classeFilter !== 'all' && ev['Classe de Atividade'] !== classeFilter) return false;
       
@@ -358,7 +378,7 @@ export default function App() {
       }
       return true;
     }).sort((a, b) => new Date(a['Início']) - new Date(b['Início']));
-  }, [events, search, timeFilter, municipioFilter, regiaoFilter, articuladorFilter, classeFilter]);
+  }, [events, search, timeFilter, municipioFilter, articuladorFilter, classeFilter]);
 
   const dashboardStats = useMemo(() => {
     const agg = (key) => {
@@ -367,7 +387,7 @@ export default function App() {
         let val = ev[key];
         if (!val || val.toString().trim() === '') return;
         const norm = normalizerFilter(val);
-        // Bloqueio ESTRITO de lixo (Outros Eventos / Não Definido)
+        // Bloqueio ESTRITO
         if (norm === 'outros eventos' || norm === 'nao definido') return;
         counts[val] = (counts[val] || 0) + 1;
       });
@@ -381,14 +401,14 @@ export default function App() {
       { name: 'Futuras (Acontecerão)', value: futureCount }
     ].filter(s => s.value > 0);
 
-    const scHeatmap = agg('Município'); // COLUNA I
+    const scHeatmap = agg('Município');
     const floripaHeatmapMap = {};
+    
+    // Leitura inteligente para Florianópolis (Coluna F interpretada)
     filteredEvents.forEach(ev => {
       if (normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa')) {
-        const reg = ev['Região']; // COLUNA H (Para Floripa)
-        if (reg && normalizerFilter(reg) !== 'nao definido') {
-          floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
-        }
+        const reg = getFloripaRegion(ev);
+        floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
       }
     });
     const floripaHeatmap = Object.entries(floripaHeatmapMap).map(([name, value]) => ({ name, value }));
@@ -417,17 +437,13 @@ export default function App() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <select value={municipioFilter} onChange={(e) => setMunicipioFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
           <option value="all">TODOS MUNICÍPIOS (COL I)</option>
           {filterOptions.municipios.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <select value={regiaoFilter} onChange={(e) => setRegiaoFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODAS REGIÕES (COL H)</option>
-          {filterOptions.regioes.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
         <select value={articuladorFilter} onChange={(e) => setArticuladorFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODOS ARTICULADORES</option>
+          <option value="all">TODOS ARTICULADORES (COL H)</option>
           {filterOptions.articuladores.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={classeFilter} onChange={(e) => setClasseFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
@@ -449,14 +465,13 @@ export default function App() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores (Col H)" /></div>
         <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Evolução Temporal" /></div>
       </div>
 
-      {/* Mapas Ocupando Tela Cheia para melhor visualização geográfica */}
       <div className="grid grid-cols-1 gap-8 mt-8">
-        <ChoroplethMap data={dashboardStats.scHeatmap} title="Geografia Coroplética - Santa Catarina (Col I)" isFloripa={false} />
-        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Geografia Coroplética - Florianópolis (Col H)" isFloripa={true} />
+        <ChoroplethMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina (Col I)" isFloripa={false} />
+        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis (Leitura de Col F)" isFloripa={true} />
       </div>
     </div>
   );
@@ -486,13 +501,12 @@ export default function App() {
                   
                   <h3 className="font-black text-lg text-[#111111] leading-tight mb-4 uppercase line-clamp-3">{ev['Título']}</h3>
                   
-                  {/* Informações dos cards 100% livres do "bonequinho roxo", usando quadrados de cor Mondrian */}
                   <div className="mt-auto space-y-2 border-t-[3px] border-[#111111] pt-3">
                     <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-2">
                        <span className="w-2.5 h-2.5 bg-[#007D8A] border-2 border-[#111111] block flex-shrink-0"></span> {formatDate(ev['Início'])}
                     </p>
                     <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-2">
-                       <span className="w-2.5 h-2.5 bg-[#C1272D] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Município']} {ev['Região'] ? `- ${ev['Região']}` : ''}
+                       <span className="w-2.5 h-2.5 bg-[#C1272D] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Município']}
                     </p>
                     <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-2">
                        <span className="w-2.5 h-2.5 bg-[#EAA221] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Articulador']}
@@ -510,7 +524,7 @@ export default function App() {
                   <tr>
                     <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Título</th>
                     <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Data</th>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Mun./Região</th>
+                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Município</th>
                     <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Articulador</th>
                   </tr>
                 </thead>
@@ -519,7 +533,7 @@ export default function App() {
                     <tr key={i} onClick={() => setSelectedEvent(ev)} className="border-b-[3px] border-[#111111] hover:bg-[#Fdfcf0] cursor-pointer">
                       <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate text-[#111111]">{ev['Título']}</td>
                       <td className="px-4 py-3 text-[10px] font-bold text-[#111111]">{formatDate(ev['Início'])}</td>
-                      <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[150px]">{ev['Município']}/{ev['Região']}</td>
+                      <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[150px]">{ev['Município']}</td>
                       <td className="px-4 py-3 text-[10px] font-bold text-[#EAA221]">{ev['Articulador']}</td>
                     </tr>
                   ))}
@@ -575,7 +589,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal de Detalhes */}
+      {}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex justify-end animate-fade-in">
           <div className="bg-[#Fdfcf0] w-full max-w-lg h-full border-l-[6px] border-[#111111] flex flex-col overflow-y-auto shadow-[-10px_0px_0px_0px_rgba(0,0,0,0.3)]">
@@ -593,11 +607,11 @@ export default function App() {
               </select>
 
               <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] space-y-4 text-[#111111]">
-                <div><label className="text-[9px] uppercase font-black text-[#007D8A] block">Município / Região</label>
-                <p className="text-sm font-bold uppercase">{selectedEvent['Município']} / {selectedEvent['Região']}</p></div>
+                <div><label className="text-[9px] uppercase font-black text-[#007D8A] block">Município / Região (Floripa)</label>
+                <p className="text-sm font-bold uppercase">{selectedEvent['Município']} {normalizerFilter(selectedEvent['Município']).includes('florianopolis') ? `/ ${getFloripaRegion(selectedEvent)}` : ''}</p></div>
                 <div><label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Articulador']}</p></div>
-                <div><label className="text-[9px] uppercase font-black text-[#C1272D] block">Local Físico</label>
+                <div><label className="text-[9px] uppercase font-black text-[#C1272D] block">Local Físico (Bruto)</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Local']}</p></div>
               </div>
             </div>
@@ -605,7 +619,6 @@ export default function App() {
         </div>
       )}
       
-      {/* CSS para Tooltip Inteligente do Leaflet (Estilo Mondrian) */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
