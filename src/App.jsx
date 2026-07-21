@@ -68,23 +68,87 @@ const normalizerFilter = (str) => {
 };
 
 // ==========================================
-// INTELIGÊNCIA GEOGRÁFICA (Baseado no Apoio)
-// Lê a Coluna F (Local) e encontra o distrito
+// INTELIGÊNCIA GEOGRÁFICA (Baseado na Planilha de Apoio)
+// Tradução da Fórmula =LET e relação de Bairros, Distritos e Regiões
 // ==========================================
-const getFloripaRegion = (evento) => {
+const FLORIPA_GEO = [
+  { k: 'centro', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'alesc', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'osni regis', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'alfandega', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'ufsc', b: 'Trindade', d: 'Sede', r: 'Centro' },
+  { k: 'udesc', b: 'Itacorubi', d: 'Sede', r: 'Centro' },
+  { k: 'agronomica', b: 'Agronômica', d: 'Sede', r: 'Centro' },
+  { k: 'trindade', b: 'Trindade', d: 'Sede', r: 'Centro' },
+  { k: 'carvoeira', b: 'Carvoeira', d: 'Sede', r: 'Centro' },
+  { k: 'saco dos limoes', b: 'Saco dos Limões', d: 'Sede', r: 'Centro' },
+  { k: 'pantanal', b: 'Pantanal', d: 'Sede', r: 'Centro' },
+  { k: 'itacorubi', b: 'Itacorubi', d: 'Sede', r: 'Centro' },
+  { k: 'santa monica', b: 'Santa Mônica', d: 'Sede', r: 'Centro' },
+  { k: 'corrego grande', b: 'Córrego Grande', d: 'Sede', r: 'Centro' },
+  { k: 'joao paulo', b: 'João Paulo', d: 'Sede', r: 'Centro' },
+  { k: 'saco grande', b: 'Saco Grande', d: 'Sede', r: 'Centro' },
+  { k: 'monte verde', b: 'Monte Verde', d: 'Sede', r: 'Centro' },
+  { k: 'costeira', b: 'Costeira do Pirajubaé', d: 'Sede', r: 'Centro' },
+  { k: 'jose mendes', b: 'José Mendes', d: 'Sede', r: 'Centro' },
+  { k: 'estreito', b: 'Estreito', d: 'Continente', r: 'Continente' },
+  { k: 'coqueiros', b: 'Coqueiros', d: 'Continente', r: 'Continente' },
+  { k: 'capoeiras', b: 'Capoeiras', d: 'Continente', r: 'Continente' },
+  { k: 'abraao', b: 'Abraão', d: 'Continente', r: 'Continente' },
+  { k: 'bom abrigo', b: 'Bom Abrigo', d: 'Continente', r: 'Continente' },
+  { k: 'itaguacu', b: 'Itaguaçu', d: 'Continente', r: 'Continente' },
+  { k: 'jardim atlantico', b: 'Jardim Atlântico', d: 'Continente', r: 'Continente' },
+  { k: 'monte cristo', b: 'Monte Cristo', d: 'Continente', r: 'Continente' },
+  { k: 'balneario', b: 'Balneário', d: 'Continente', r: 'Continente' },
+  { k: 'lagoa da conceicao', b: 'Lagoa da Conceição', d: 'Lagoa da Conceição', r: 'Leste da Ilha' },
+  { k: 'barra da lagoa', b: 'Barra da Lagoa', d: 'Barra da Lagoa', r: 'Leste da Ilha' },
+  { k: 'rio vermelho', b: 'Rio Vermelho', d: 'São João do Rio Vermelho', r: 'Leste da Ilha' },
+  { k: 'costa da lagoa', b: 'Costa da Lagoa', d: 'Lagoa da Conceição', r: 'Leste da Ilha' },
+  { k: 'mocambique', b: 'Moçambique', d: 'São João do Rio Vermelho', r: 'Leste da Ilha' },
+  { k: 'canasvieiras', b: 'Canasvieiras', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'ingleses', b: 'Ingleses', d: 'Ingleses do Rio Vermelho', r: 'Norte da Ilha' },
+  { k: 'jurere', b: 'Jurerê', d: 'Jurerê', r: 'Norte da Ilha' },
+  { k: 'santo antonio', b: 'Santo Antônio de Lisboa', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' },
+  { k: 'sambaqui', b: 'Sambaqui', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' },
+  { k: 'cacupe', b: 'Cacupé', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' },
+  { k: 'ratones', b: 'Ratones', d: 'Ratones', r: 'Norte da Ilha' },
+  { k: 'vargem pequena', b: 'Vargem Pequena', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'vargem grande', b: 'Vargem Grande', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'vargem', b: 'Vargem', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'ponta das canas', b: 'Ponta das Canas', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
+  { k: 'cachoeira', b: 'Cachoeira do Bom Jesus', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
+  { k: 'praia brava', b: 'Praia Brava', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
+  { k: 'daniela', b: 'Daniela', d: 'Jurerê', r: 'Norte da Ilha' },
+  { k: 'campeche', b: 'Campeche', d: 'Campeche', r: 'Sul da Ilha' },
+  { k: 'ribeirao', b: 'Ribeirão da Ilha', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
+  { k: 'tapera', b: 'Tapera', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
+  { k: 'armacao', b: 'Armação', d: 'Pântano do Sul', r: 'Sul da Ilha' },
+  { k: 'pantano', b: 'Pântano do Sul', d: 'Pântano do Sul', r: 'Sul da Ilha' },
+  { k: 'morro das pedras', b: 'Morro das Pedras', d: 'Campeche', r: 'Sul da Ilha' },
+  { k: 'carianos', b: 'Carianos', d: 'Sede', r: 'Sul da Ilha' },
+  { k: 'caieira', b: 'Caieira', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
+  { k: 'solidao', b: 'Solidão', d: 'Pântano do Sul', r: 'Sul da Ilha' },
+  { k: 'naufragados', b: 'Naufragados', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' }
+];
+
+const enrichFloripaLocation = (evento) => {
   const textToSearch = [
     evento['Local'] || '', 
     evento['Título'] || '', 
     evento['Descrição'] || ''
   ].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  if (textToSearch.match(/(norte da ilha|canasvieiras|ingleses|jurere|santo antonio|sambaqui|cacupe|ratones|vargem|ponta das canas|cachoeira do bom jesus|praia brava|daniela)/)) return 'Norte da Ilha';
-  if (textToSearch.match(/(sul da ilha|campeche|ribeirao|tapera|armacao|pantano|morro das pedras|carianos|caieira|solidao|naufragados)/)) return 'Sul da Ilha';
-  if (textToSearch.match(/(leste da ilha|lagoa da conceicao|barra da lagoa|rio vermelho|costa da lagoa|mocambique)/)) return 'Leste da Ilha';
-  if (textToSearch.match(/(continente|estreito|coqueiros|capoeiras|abraao|bom abrigo|itaguacu|jardim atlantico|monte cristo|balneario)/)) return 'Continente';
-  if (textToSearch.match(/(centro|agronomica|trindade|saco dos limoes|pantanal|itacorubi|santa monica|corrego|joao paulo|saco grande|monte verde|costeira|jose mendes|carvoeira|alesc|osni regis|alfandega|ufsc|udesc|cic|mpsc|pgj|gabinete|plenarinho|plenario|baia sul|beiramar|sessao ordinaria)/)) return 'Centro';
-
-  return 'Centro'; // Padrão se for em Floripa e não identificar o bairro
+  // Procura no Dicionário
+  for (let geo of FLORIPA_GEO) {
+    if (textToSearch.includes(geo.k)) {
+      return { bairro: geo.b, distrito: geo.d, regiao: geo.r };
+    }
+  }
+  
+  // Condição de Fallback (Online ou Indefinido)
+  if (textToSearch.match(/(online|virtual|on line)/)) return { bairro: 'Digital/Online', distrito: '-', regiao: 'Centro' };
+  
+  return { bairro: 'Não Identificado', distrito: 'Não Identificado', regiao: 'Centro' };
 };
 
 const normalizeData = (data) => {
@@ -112,6 +176,20 @@ const normalizeData = (data) => {
     Object.keys(newItem).forEach(k => {
       if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) newItem[k] = '';
     });
+    
+    // ATRIBUIÇÃO AUTOMÁTICA DE BAIRRO E DISTRITO PARA FLORIPA
+    const isFloripa = normalizerFilter(newItem['Município']).includes('florianopolis') || normalizerFilter(newItem['Município']).includes('floripa');
+    if (isFloripa) {
+      const floripaGeo = enrichFloripaLocation(newItem);
+      newItem['Bairro'] = floripaGeo.bairro;
+      newItem['Distrito'] = floripaGeo.distrito;
+      newItem['Região Floripa'] = floripaGeo.regiao;
+    } else {
+      newItem['Bairro'] = '-';
+      newItem['Distrito'] = '-';
+      newItem['Região Floripa'] = '-';
+    }
+
     return newItem;
   });
 };
@@ -456,10 +534,10 @@ export default function App() {
     const scHeatmap = agg('Município');
     const floripaHeatmapMap = {};
     
-    // Leitura inteligente para Florianópolis (Coluna F interpretada)
+    // Leitura inteligente para Florianópolis usando a Região calculada na normalização
     filteredEvents.forEach(ev => {
       if (normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa')) {
-        const reg = getFloripaRegion(ev);
+        const reg = ev['Região Floripa'] || 'Centro';
         floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
       }
     });
@@ -590,16 +668,32 @@ export default function App() {
                   <tr>
                     <th onClick={() => requestSort('Título')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Título{getSortIndicator('Título')}</th>
                     <th onClick={() => requestSort('Início')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Data{getSortIndicator('Início')}</th>
-                    <th onClick={() => requestSort('Município')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Município{getSortIndicator('Município')}</th>
+                    {locationScope === 'capital' ? (
+                      <>
+                        <th onClick={() => requestSort('Bairro')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Bairro{getSortIndicator('Bairro')}</th>
+                        <th onClick={() => requestSort('Distrito')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Distrito{getSortIndicator('Distrito')}</th>
+                        <th onClick={() => requestSort('Região Floripa')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Região{getSortIndicator('Região Floripa')}</th>
+                      </>
+                    ) : (
+                      <th onClick={() => requestSort('Município')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Município{getSortIndicator('Município')}</th>
+                    )}
                     <th onClick={() => requestSort('Articulador')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Articulador{getSortIndicator('Articulador')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEvents.map((ev, i) => (
                     <tr key={i} onClick={() => setSelectedEvent(ev)} className="border-b-[3px] border-[#111111] hover:bg-[#Fdfcf0] cursor-pointer">
-                      <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate text-[#111111]">{ev['Título']}</td>
+                      <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate text-[#111111]" title={ev['Título']}>{ev['Título']}</td>
                       <td className="px-4 py-3 text-[10px] font-bold text-[#111111]">{formatDate(ev['Início'])}</td>
-                      <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[150px]">{ev['Município']}</td>
+                      {locationScope === 'capital' ? (
+                        <>
+                          <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[120px]">{ev['Bairro']}</td>
+                          <td className="px-4 py-3 text-[10px] font-bold text-[#007D8A] truncate max-w-[120px]">{ev['Distrito']}</td>
+                          <td className="px-4 py-3 text-[10px] font-bold text-[#111111] truncate max-w-[120px]">{ev['Região Floripa']}</td>
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[150px]">{ev['Município']}</td>
+                      )}
                       <td className="px-4 py-3 text-[10px] font-bold text-[#EAA221]">{ev['Articulador']}</td>
                     </tr>
                   ))}
