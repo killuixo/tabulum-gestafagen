@@ -1,177 +1,507 @@
-import React, { useState, useEffect, useMemo } from 'react';import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';import 'leaflet/dist/leaflet.css';// Variável de ambiente protegida (Configure no Vercel como VITE_URL_PLANILHA_CSV)const URL_PLANILHA_CSV = import.meta.env.VITE_URL_PLANILHA_CSV || '';// Paleta Mondrianconst PALETA = {carmesim: '#C8102E',mostarda: '#F2A900',azulEsverdeado: '#006A6B',branco: '#FFFFFF',preto: '#000000',fundo: '#F4F4F4'};// Parser CSV Nativo (Sem dependências externas)function parseCSV(texto) {let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;for (l of texto) {if ('"' === l) {if (s && l === p) row[i] += l;s = !s;} else if (',' === l && s) l = row[++i] = '';else if ('\n' === l && s) {if ('\r' === p) row[i] = row[i].slice(0, -1);row = ret[++r] = [l = '']; i = 0;} else row[i] += l;p = l;}const cabecalhos = ret[0];return ret.slice(1).map(linha => {let obj = {};cabecalhos.forEach((cabecalho, index) => {if (cabecalho) obj[cabecalho.trim()] = linha[index] ? linha[index].trim() : '';});return obj;}).filter(item => item['Título']); // Filtra linhas vazias}export default function App() {const [dados, setDados] = useState([]);const [carregando, setCarregando] = useState(true);const [erro, setErro] = useState(null);const [abaAtiva, setAbaAtiva] = useState('lista');const [busca, setBusca] = useState('');const [filtroStatus, setFiltroStatus] = useState('Todos');const [modoVisao, setModoVisao] = useState('cards');const [eventoSelecionado, setEventoSelecionado] = useState(null);useEffect(() => {if (!URL_PLANILHA_CSV) {setErro("URL da planilha não encontrada no ambiente (.env).");setCarregando(false);return;}const buscarDados = async () => {
-  try {
-    const resposta = await fetch(URL_PLANILHA_CSV);
-    const textoCsv = await resposta.text();
-    const dadosParseados = parseCSV(textoCsv);
-    setDados(dadosParseados);
-    setCarregando(false);
-  } catch (error) {
-    setErro("Falha ao carregar a planilha.");
-    setCarregando(false);
-  }
+import React, { useState, useEffect, useMemo } from 'react';
+
+// Constantes e Mock Data
+// Para usar no Vercel com Vite, substitua a string vazia por: import.meta.env.VITE_APPS_SCRIPT_URL
+const API_URL = ''; 
+
+const MOCK_DATA = [
+  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação de projetos de lei ambientais.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Região': 'Grande Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
+  { id: 3, 'Título': 'Reunião Associação Moradores', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Debate sobre saneamento básico.', 'Duração': 120, 'Local': 'Campeche - Florianópolis', 'Classe de Atividade': 'Comunidade', 'Região': 'Florianópolis (Sul)', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
+  { id: 4, 'Título': 'Visita Feira Orgânica', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 165600000).toISOString(), 'Descrição': 'Apoio aos produtores locais.', 'Duração': 120, 'Local': 'Chapecó', 'Classe de Atividade': 'Visita Técnica', 'Região': 'Oeste', 'Articulador': 'Pedro Alves', 'STATUS': 'Realizado' },
+  { id: 5, 'Título': 'Audiência Pública Meio Ambiente', 'Início': new Date(Date.now() + 259200000).toISOString(), 'Fim': new Date(Date.now() + 273600000).toISOString(), 'Descrição': 'Proteção de mananciais.', 'Duração': 240, 'Local': 'Joinville', 'Classe de Atividade': 'Audiência Pública', 'Região': 'Norte', 'Articulador': 'Ana Souza', 'STATUS': 'Confirmado' },
+  { id: 6, 'Título': 'Entrevista Rádio Local', 'Início': new Date(Date.now() - 86400000).toISOString(), 'Fim': new Date(Date.now() - 82800000).toISOString(), 'Descrição': 'Pauta: Agricultura Familiar', 'Duração': 60, 'Local': 'Lages', 'Classe de Atividade': 'Imprensa', 'Região': 'Serra', 'Articulador': 'João Silva', 'STATUS': 'Realizado' },
+];
+
+// Funções Auxiliares
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
 };
-buscarDados();
-}, []);const dadosProcessados = useMemo(() => {const hoje = new Date();hoje.setHours(0, 0, 0, 0);return dados.map(evento => {
-  let statusCalculado = "Desconhecido";
-  if (evento['Início']) {
-    const partes = evento['Início'].split('/');
-    if (partes.length === 3) {
-      // Extraindo e formatando dd/mm/yyyy (suporta datas nativas do Apps Script)
-      const dataEvento = new Date(partes[2].substring(0,4), parseInt(partes[1]) - 1, partes[0]);
-      statusCalculado = dataEvento < hoje ? "Realizada" : "Futura";
-    }
-  }
 
-  // Extrair coordenadas do Google Maps para os mapas
-  let coords = null;
-  if (evento['Local']) {
-    const match = evento['Local'].match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (match) coords = [parseFloat(match[1]), parseFloat(match[2])];
-  }
+const isFuture = (dateString) => new Date(dateString) >= new Date();
+const isPast = (dateString) => new Date(dateString) < new Date();
 
-  return { ...evento, StatusDinâmico: statusCalculado, coords };
-});
-}, [dados]);const dadosFiltrados = useMemo(() => {return dadosProcessados.filter(evento => {if (filtroStatus !== 'Todos' && evento.StatusDinâmico !== filtroStatus) return false;const termo = busca.toLowerCase();return (evento['Título']?.toLowerCase().includes(termo) ||evento['Local']?.toLowerCase().includes(termo) ||evento['ARTICULADOR']?.toLowerCase().includes(termo));});}, [dadosProcessados, busca, filtroStatus]);const contarPor = (chave) => {const contagem = dadosProcessados.reduce((acc, curr) => {const valor = curr[chave] || 'Não Informado';acc[valor] = (acc[valor] || 0) + 1;return acc;}, {});return Object.keys(contagem).map(key => ({ name: key, value: contagem[key] })).sort((a, b) => b.value - a.value);};const dadosClasse = contarPor('CLASSE DE ATIVIDADE');const dadosArticulador = contarPor('ARTICULADOR');const eventosComMapa = dadosProcessados.filter(e => e.coords);const COLORS = [PALETA.azulEsverdeado, PALETA.mostarda, PALETA.carmesim, '#000000'];if (carregando) return Carregando GesTAg...;if (erro) return {erro};return ({/* HEADER MONDRIAN */}GesTAg<button style={abaAtiva === 'lista' ? styles.btnNavAtivo : styles.btnNav} onClick={() => setAbaAtiva('lista')}>LISTA<button style={abaAtiva === 'dashboard' ? styles.btnNavAtivo : styles.btnNav} onClick={() => setAbaAtiva('dashboard')}>DASHBOARD  <main style={styles.main}>
-    {abaAtiva === 'lista' && (
-      <section>
-        <div style={styles.controlesGrid}>
-          <input 
-            type="text" 
-            placeholder="BUSCAR AGENDA..." 
-            value={busca} 
-            onChange={(e) => setBusca(e.target.value)} 
-            style={styles.inputBusca}
-          />
-          <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} style={styles.selectStatus}>
-            <option value="Todos">TODOS OS STATUS</option>
-            <option value="Futura">FUTURAS</option>
-            <option value="Realizada">REALIZADAS</option>
-          </select>
-          <button onClick={() => setModoVisao(modoVisao === 'cards' ? 'lista' : 'cards')} style={styles.btnModoVisao}>
-            VISÃO: {modoVisao.toUpperCase()}
-          </button>
-        </div>
+// Componentes Gráficos Nativos (Sem dependências)
+const SimpleBarChart = ({ data, title }) => {
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1 min-w-[300px]">
+      <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
+      <div className="space-y-3">
+        {data.map((item, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <span className="text-xs text-gray-600 w-24 truncate" title={item.name}>{item.name}</span>
+            <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                style={{ width: `${(item.value / maxVal) * 100}%` }}
+              ></div>
+            </div>
+            <span className="text-xs font-medium text-gray-800 w-6 text-right">{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
-        <div style={modoVisao === 'cards' ? styles.gridCards : styles.flexLista}>
-          {dadosFiltrados.map((evento, index) => (
-            <div key={index} style={styles.cardMondrian} onClick={() => setEventoSelecionado(evento)}>
-              <div style={{...styles.faixaCor, backgroundColor: evento.StatusDinâmico === 'Futura' ? PALETA.azulEsverdeado : PALETA.mostarda}} />
-              <div style={styles.cardConteudo}>
-                <div style={styles.badgeMondrian}>{evento.StatusDinâmico.toUpperCase()}</div>
-                <h3 style={styles.cardTitulo}>{evento['Título']?.toUpperCase()}</h3>
-                <p style={styles.cardInfo}>DATA: {evento['Início']} {evento['Fim'] ? `- ${evento['Fim']}` : ''}</p>
-                <p style={styles.cardInfo}>ARTICULADOR: {evento['ARTICULADOR'] || 'N/A'}</p>
+const SimplePieChart = ({ data, title }) => {
+  const total = data.reduce((acc, curr) => acc + curr.value, 0);
+  let cumulativePercent = 0;
+
+  const getCoordinatesForPercent = (percent) => {
+    const x = Math.cos(2 * Math.PI * percent);
+    const y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
+  };
+
+  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1 min-w-[300px] flex flex-col items-center">
+      <h3 className="text-sm font-semibold text-gray-700 mb-4 self-start">{title}</h3>
+      <div className="relative w-32 h-32">
+        <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full">
+          {data.map((slice, i) => {
+            if (slice.value === 0) return null;
+            const percent = slice.value / total;
+            const startX = getCoordinatesForPercent(cumulativePercent)[0];
+            const startY = getCoordinatesForPercent(cumulativePercent)[1];
+            cumulativePercent += percent;
+            const endX = getCoordinatesForPercent(cumulativePercent)[0];
+            const endY = getCoordinatesForPercent(cumulativePercent)[1];
+            const largeArcFlag = percent > 0.5 ? 1 : 0;
+            const pathData = [
+              `M ${startX} ${startY}`,
+              `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+              `L 0 0`,
+            ].join(' ');
+
+            return <path key={i} d={pathData} fill={colors[i % colors.length]} />;
+          })}
+        </svg>
+      </div>
+      <div className="mt-4 w-full flex flex-wrap gap-2 justify-center">
+        {data.map((item, i) => (
+          <div key={i} className="flex items-center gap-1 text-xs text-gray-600">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[i % colors.length] }}></span>
+            {item.name} ({(item.value / total * 100).toFixed(0)}%)
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Visualização Abstrata de Mapas de Calor (Disposição em Grid Representativo)
+const HeatmapGrid = ({ data, title, isFloripa }) => {
+  // Simulação de mapa de calor baseada na densidade de eventos por região
+  const maxDensity = Math.max(...data.map(d => d.value), 1);
+  
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1 min-w-[300px]">
+      <h3 className="text-sm font-semibold text-gray-700 mb-2">{title}</h3>
+      <p className="text-xs text-gray-400 mb-4">Intensidade de agenda por localidade</p>
+      
+      <div className={`grid ${isFloripa ? 'grid-cols-2' : 'grid-cols-3'} gap-2 h-40`}>
+        {data.map((item, i) => {
+          const intensity = item.value / maxDensity;
+          // Cores variando do cinza claro ao vermelho escuro baseado na intensidade
+          const bgColor = intensity > 0.8 ? 'bg-red-500' : 
+                          intensity > 0.5 ? 'bg-orange-400' : 
+                          intensity > 0.2 ? 'bg-amber-300' : 
+                          intensity > 0 ? 'bg-emerald-200' : 'bg-gray-50';
+          
+          return (
+            <div key={i} className={`${bgColor} rounded-md flex items-center justify-center relative group transition-colors`}>
+              <span className={`text-[10px] font-bold ${intensity > 0.5 ? 'text-white' : 'text-gray-700'} text-center px-1`}>
+                {item.name.substring(0, 10)}{item.name.length > 10 ? '...' : ''}
+              </span>
+              {/* Tooltip */}
+              <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs p-1 rounded -top-6 whitespace-nowrap z-10">
+                {item.name}: {item.value} agendas
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-    )}
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
-    {abaAtiva === 'dashboard' && (
-      <section style={styles.dashboardContainer}>
-        <div style={styles.kpiContainer}>
-          <div style={{...styles.kpiBox, borderBottom: `8px solid ${PALETA.preto}`}}>
-            <span style={styles.kpiLabel}>TOTAL</span>
-            <span style={styles.kpiValor}>{dadosProcessados.length}</span>
-          </div>
-          <div style={{...styles.kpiBox, borderBottom: `8px solid ${PALETA.azulEsverdeado}`}}>
-            <span style={styles.kpiLabel}>FUTURAS</span>
-            <span style={styles.kpiValor}>{dadosProcessados.filter(e => e.StatusDinâmico === 'Futura').length}</span>
-          </div>
-          <div style={{...styles.kpiBox, borderBottom: `8px solid ${PALETA.carmesim}`}}>
-            <span style={styles.kpiLabel}>REALIZADAS</span>
-            <span style={styles.kpiValor}>{dadosProcessados.filter(e => e.StatusDinâmico === 'Realizada').length}</span>
-          </div>
-        </div>
+export default function App() {
+  const [activeTab, setActiveTab] = useState('list'); // 'dashboard', 'list'
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Controls
+  const [search, setSearch] = useState('');
+  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'future', 'past'
+  const [viewMode, setViewMode] = useState('cards'); // 'cards', 'table'
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
-        <div style={styles.gridGraficos}>
-          <div style={styles.boxMondrian}>
-            <h3 style={styles.tituloBoxChart}>CLASSE DE ATIVIDADE</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={dadosClasse} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={{fill: PALETA.preto, fontWeight: 'bold'}}>
-                  {dadosClasse.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{border: '4px solid #000', borderRadius: 0}} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+  // Fetch Data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!API_URL) {
+          console.warn("VITE_APPS_SCRIPT_URL não definida. Usando dados mockados.");
+          setEvents(MOCK_DATA);
+        } else {
+          const response = await fetch(API_URL);
+          const data = await response.json();
+          setEvents(data);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados:", error);
+        setEvents(MOCK_DATA); // Fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-          <div style={styles.boxMondrian}>
-            <h3 style={styles.tituloBoxChart}>ARTICULADOR</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={dadosArticulador} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={{fill: PALETA.preto, fontWeight: 'bold'}}>
-                  {dadosArticulador.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{border: '4px solid #000', borderRadius: 0}} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+  // Update Status Logic
+  const handleUpdateStatus = async (id, newStatus) => {
+    // Optimistic UI update
+    const updatedEvents = events.map(ev => ev.id === id ? { ...ev, 'STATUS': newStatus } : ev);
+    setEvents(updatedEvents);
+    if (selectedEvent && selectedEvent.id === id) {
+      setSelectedEvent({ ...selectedEvent, 'STATUS': newStatus });
+    }
 
-        <div style={styles.gridGraficos}>
-          <div style={styles.boxMondrian}>
-            <h3 style={styles.tituloBoxChart}>MAPA DE CALOR: SANTA CATARINA</h3>
-            <div style={{ height: '400px', width: '100%', borderTop: `4px solid ${PALETA.preto}` }}>
-              <MapContainer center={[-27.2423, -50.2189]} zoom={6} style={{ height: '100%', width: '100%', background: PALETA.fundo }}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png" />
-                {eventosComMapa.map((ev, idx) => (
-                  <CircleMarker key={idx} center={ev.coords} radius={8} pathOptions={{ color: PALETA.preto, fillColor: PALETA.carmesim, fillOpacity: 0.7, weight: 2 }}>
-                    <Popup>{ev['Título']}</Popup>
-                  </CircleMarker>
-                ))}
-              </MapContainer>
-            </div>
-          </div>
+    if (API_URL) {
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ id, status: newStatus }),
+        });
+      } catch (error) {
+        console.error("Erro ao atualizar status:", error);
+        alert("Erro ao atualizar o status na planilha.");
+      }
+    }
+  };
 
-          <div style={styles.boxMondrian}>
-            <h3 style={styles.tituloBoxChart}>MAPA DE CALOR: FLORIANÓPOLIS</h3>
-            <div style={{ height: '400px', width: '100%', borderTop: `4px solid ${PALETA.preto}` }}>
-              <MapContainer center={[-27.5954, -48.5480]} zoom={11} style={{ height: '100%', width: '100%', background: PALETA.fundo }}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png" />
-                {eventosComMapa.map((ev, idx) => (
-                  <CircleMarker key={idx} center={ev.coords} radius={12} pathOptions={{ color: PALETA.preto, fillColor: PALETA.mostarda, fillOpacity: 0.7, weight: 2 }}>
-                    <Popup>{ev['Título']}</Popup>
-                  </CircleMarker>
-                ))}
-              </MapContainer>
-            </div>
-          </div>
-        </div>
-      </section>
-    )}
-  </main>
+  // Data Processing for Filters
+  const filteredEvents = useMemo(() => {
+    return events.filter(ev => {
+      // Time filter
+      if (timeFilter === 'future' && !isFuture(ev['Início'])) return false;
+      if (timeFilter === 'past' && !isPast(ev['Início'])) return false;
+      
+      // Search filter
+      if (search) {
+        const term = search.toLowerCase();
+        return (
+          (ev['Título'] && ev['Título'].toLowerCase().includes(term)) ||
+          (ev['Local'] && ev['Local'].toLowerCase().includes(term)) ||
+          (ev['Descrição'] && ev['Descrição'].toLowerCase().includes(term)) ||
+          (ev['Articulador'] && ev['Articulador'].toLowerCase().includes(term))
+        );
+      }
+      return true;
+    }).sort((a, b) => new Date(a['Início']) - new Date(b['Início'])); // Ordena por data
+  }, [events, search, timeFilter]);
 
-  {/* MODAL MONDRIAN */}
-  {eventoSelecionado && (
-    <div style={styles.modalOverlay} onClick={() => setEventoSelecionado(null)}>
-      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <div style={styles.modalHeaderGrid}>
-          <div style={{backgroundColor: PALETA.carmesim, width: '100%', height: '100%', borderRight: `4px solid ${PALETA.preto}`}}></div>
-          <h2 style={styles.modalTitulo}>{eventoSelecionado['Título']?.toUpperCase()}</h2>
-          <button style={styles.btnFecharModal} onClick={() => setEventoSelecionado(null)}>X</button>
+  // Data Processing for Dashboard
+  const dashboardStats = useMemo(() => {
+    const agg = (key) => {
+      const counts = {};
+      events.forEach(ev => {
+        const val = ev[key] || 'Não definido';
+        counts[val] = (counts[val] || 0) + 1;
+      });
+      return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    };
+
+    // Separando regiões gerais (SC) e regiões específicas de Floripa
+    const todasRegioes = agg('Região');
+    const scRegioes = todasRegioes.filter(r => !r.name.toLowerCase().includes('florianópolis (') && r.name !== 'Não definido');
+    const floripaRegioes = todasRegioes.filter(r => r.name.toLowerCase().includes('florianópolis ('));
+
+    return {
+      classes: agg('Classe de Atividade'),
+      regioes: todasRegioes,
+      articuladores: agg('Articulador'),
+      scHeatmap: scRegioes.length > 0 ? scRegioes : [{name: 'Oeste', value: 1}, {name: 'Norte', value: 2}, {name: 'Vale', value: 1}, {name: 'Sul', value: 1}, {name: 'Serra', value: 0}], // mock fallback if empty
+      floripaHeatmap: floripaRegioes.length > 0 ? floripaRegioes : [{name: 'Norte da Ilha', value: 2}, {name: 'Sul da Ilha', value: 3}, {name: 'Continente', value: 1}, {name: 'Centro', value: 4}] // mock fallback if empty
+    };
+  }, [events]);
+
+  const renderDashboard = () => (
+    <div className="space-y-6 animate-fade-in pb-10">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-800 tracking-tight">Visão Geral da Agenda</h2>
+        <span className="text-sm font-medium px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full">
+          Total de Agendas: {events.length}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <SimpleBarChart data={dashboardStats.classes} title="Agendas por Classe de Atividade" />
+        <SimplePieChart data={dashboardStats.regioes} title="Distribuição por Região" />
+        <SimplePieChart data={dashboardStats.articuladores} title="Volume por Articulador" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <HeatmapGrid data={dashboardStats.scHeatmap} title="Calor de Agendas - Santa Catarina" isFloripa={false} />
+        <HeatmapGrid data={dashboardStats.floripaHeatmap} title="Calor de Agendas - Florianópolis" isFloripa={true} />
+      </div>
+    </div>
+  );
+
+  const renderList = () => (
+    <div className="space-y-4 animate-fade-in pb-10">
+      {/* Controles */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex-1 relative">
+          <input 
+            type="text" 
+            placeholder="Buscar por título, local, articulador..." 
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
         </div>
         
-        <div style={styles.modalCorpo}>
-          <div style={styles.infoMondrian}><strong>STATUS:</strong> {eventoSelecionado.StatusDinâmico.toUpperCase()}</div>
-          <div style={styles.infoMondrian}><strong>INÍCIO:</strong> {eventoSelecionado['Início']}</div>
-          <div style={styles.infoMondrian}><strong>FIM:</strong> {eventoSelecionado['Fim']}</div>
-          <div style={styles.infoMondrian}><strong>DURAÇÃO:</strong> {eventoSelecionado['Duração']} min</div>
-          <div style={styles.infoMondrian}><strong>ARTICULADOR:</strong> {eventoSelecionado['ARTICULADOR']}</div>
-          <div style={styles.infoMondrian}><strong>CLASSE:</strong> {eventoSelecionado['CLASSE DE ATIVIDADE']}</div>
-          <div style={{...styles.infoMondrian, gridColumn: '1 / -1'}}><strong>LOCAL:</strong> {eventoSelecionado['Local']}</div>
-          
-          <div style={styles.descricaoBox}>
-            <strong>DESCRIÇÃO:</strong>
-            <p style={{whiteSpace: 'pre-wrap', marginTop: '8px'}}>{eventoSelecionado['Descrição'] || 'N/A'}</p>
+        <div className="flex gap-2">
+          <select 
+            className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2 outline-none"
+            value={timeFilter}
+            onChange={(e) => setTimeFilter(e.target.value)}
+          >
+            <option value="all">Todas as Agendas</option>
+            <option value="future">Agendas Futuras</option>
+            <option value="past">Agendas Realizadas</option>
+          </select>
+
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            <button onClick={() => setViewMode('cards')} className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === 'cards' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>Cards</button>
+            <button onClick={() => setViewMode('table')} className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === 'table' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>Lista</button>
           </div>
         </div>
       </div>
+
+      {/* Exibição */}
+      {filteredEvents.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-100 border-dashed">
+          Nenhuma agenda encontrada com os filtros atuais.
+        </div>
+      ) : (
+        <>
+          {viewMode === 'cards' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredEvents.map((ev, i) => (
+                <div key={i} onClick={() => setSelectedEvent(ev)} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col h-full group relative overflow-hidden">
+                  <div className={`absolute top-0 left-0 w-1 h-full ${isFuture(ev['Início']) ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded">{ev['Classe de Atividade'] || 'Sem Classe'}</span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${ev['STATUS'] === 'Confirmado' || ev['STATUS'] === 'Realizado' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
+                      {ev['STATUS'] || 'Pendente'}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-gray-800 leading-tight mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2">{ev['Título']}</h3>
+                  <div className="mt-auto space-y-1.5 text-xs text-gray-500">
+                    <div className="flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> {formatDate(ev['Início'])}</div>
+                    <div className="flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> <span className="truncate">{ev['Local'] || ev['Região']}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="px-4 py-3">Título</th>
+                      <th className="px-4 py-3">Data</th>
+                      <th className="px-4 py-3">Local/Região</th>
+                      <th className="px-4 py-3">Articulador</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEvents.map((ev, i) => (
+                      <tr key={i} onClick={() => setSelectedEvent(ev)} className="bg-white border-b border-gray-50 hover:bg-emerald-50/50 cursor-pointer transition-colors">
+                        <td className="px-4 py-3 font-medium text-gray-900 truncate max-w-[200px]">{ev['Título']}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{formatDate(ev['Início'])}</td>
+                        <td className="px-4 py-3 truncate max-w-[150px]">{ev['Local'] || ev['Região']}</td>
+                        <td className="px-4 py-3">{ev['Articulador']}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${ev['STATUS'] === 'Confirmado' || ev['STATUS'] === 'Realizado' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
+                            {ev['STATUS'] || 'Pendente'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
-  )}
-</div>
-);}// ESTILOS MONDRIANconst styles = {container: { fontFamily: '"Courier New", Courier, monospace', backgroundColor: PALETA.branco, minHeight: '100vh', color: PALETA.preto },loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '2rem', fontWeight: 'bold', border: 8px solid ${PALETA.preto}, margin: '20px' },erro: { backgroundColor: PALETA.carmesim, color: PALETA.branco, padding: '20px', border: 8px solid ${PALETA.preto}, margin: '20px', fontWeight: 'bold', textAlign: 'center' },header: { display: 'flex', borderBottom: 8px solid ${PALETA.preto}, backgroundColor: PALETA.branco },tituloBox: { padding: '20px 40px', backgroundColor: PALETA.mostarda, borderRight: 8px solid ${PALETA.preto}, fontSize: '2rem', fontWeight: '900', letterSpacing: '2px' },nav: { display: 'flex', flex: 1 },btnNav: { flex: 1, backgroundColor: PALETA.branco, border: 'none', borderRight: 4px solid ${PALETA.preto}, fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', outline: 'none' },btnNavAtivo: { flex: 1, backgroundColor: PALETA.preto, color: PALETA.branco, border: 'none', borderRight: 4px solid ${PALETA.preto}, fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', outline: 'none' },main: { padding: '40px', maxWidth: '1400px', margin: '0 auto' },controlesGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '40px' },inputBusca: { padding: '16px', border: 4px solid ${PALETA.preto}, fontSize: '1.2rem', fontWeight: 'bold', outline: 'none', backgroundColor: PALETA.branco, fontFamily: 'inherit' },selectStatus: { padding: '16px', border: 4px solid ${PALETA.preto}, fontSize: '1.2rem', fontWeight: 'bold', outline: 'none', backgroundColor: PALETA.branco, cursor: 'pointer', fontFamily: 'inherit' },btnModoVisao: { padding: '16px', border: 4px solid ${PALETA.preto}, backgroundColor: PALETA.azulEsverdeado, color: PALETA.branco, fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },gridCards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' },flexLista: { display: 'flex', flexDirection: 'column', gap: '16px' },cardMondrian: { display: 'flex', border: 6px solid ${PALETA.preto}, backgroundColor: PALETA.branco, cursor: 'pointer', transition: 'transform 0.1s', position: 'relative' },faixaCor: { width: '20px', borderRight: 4px solid ${PALETA.preto} },cardConteudo: { padding: '20px', flex: 1 },badgeMondrian: { display: 'inline-block', border: 3px solid ${PALETA.preto}, padding: '4px 8px', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '12px', backgroundColor: PALETA.branco },cardTitulo: { margin: '0 0 12px 0', fontSize: '1.2rem', fontWeight: '900', lineHeight: '1.2' },cardInfo: { margin: '4px 0', fontSize: '0.9rem', fontWeight: 'bold' },dashboardContainer: { display: 'flex', flexDirection: 'column', gap: '40px' },kpiContainer: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' },kpiBox: { border: 6px solid ${PALETA.preto}, padding: '24px', backgroundColor: PALETA.branco, display: 'flex', flexDirection: 'column', alignItems: 'center' },kpiLabel: { fontSize: '1.2rem', fontWeight: 'bold', letterSpacing: '1px' },kpiValor: { fontSize: '4rem', fontWeight: '900', marginTop: '12px' },gridGraficos: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '40px' },boxMondrian: { border: 6px solid ${PALETA.preto}, backgroundColor: PALETA.branco },tituloBoxChart: { margin: 0, padding: '16px', borderBottom: 4px solid ${PALETA.preto}, backgroundColor: PALETA.mostarda, fontSize: '1.2rem', fontWeight: '900', textAlign: 'center' },modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '24px' },modalContent: { border: 8px solid ${PALETA.preto}, backgroundColor: PALETA.branco, width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' },modalHeaderGrid: { display: 'grid', gridTemplateColumns: '40px 1fr 60px', borderBottom: 6px solid ${PALETA.preto} },modalTitulo: { padding: '24px', margin: 0, fontSize: '1.8rem', fontWeight: '900' },btnFecharModal: { border: 'none', borderLeft: 6px solid ${PALETA.preto}, backgroundColor: PALETA.branco, fontSize: '2rem', fontWeight: 'bold', cursor: 'pointer' },modalCorpo: { padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },infoMondrian: { borderBottom: 3px solid ${PALETA.preto}, paddingBottom: '8px', fontSize: '1.1rem' },descricaoBox: { gridColumn: '1 / -1', border: 4px solid ${PALETA.preto}, padding: '20px', marginTop: '20px', backgroundColor: PALETA.branco }};
+  );
+
+  const renderDetails = () => {
+    if (!selectedEvent) return null;
+    const isPastEvent = isPast(selectedEvent['Início']);
+
+    return (
+      <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex justify-end animate-fade-in">
+        <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col transform transition-transform translate-x-0 overflow-y-auto">
+          {/* Header */}
+          <div className="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-start sticky top-0 z-10">
+            <div>
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded uppercase">{selectedEvent['Classe de Atividade']}</span>
+              <h2 className="text-xl font-bold text-gray-900 mt-2 leading-tight">{selectedEvent['Título']}</h2>
+            </div>
+            <button onClick={() => setSelectedEvent(null)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="p-6 space-y-6 flex-1">
+            
+            {/* Status Manager */}
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+              <label className="block text-xs font-bold text-blue-800 uppercase mb-2">Status da Agenda</label>
+              <select 
+                className="w-full bg-white border border-blue-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none shadow-sm"
+                value={selectedEvent['STATUS'] || 'Pendente'}
+                onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)}
+              >
+                <option value="Pendente">Pendente</option>
+                <option value="Confirmado">Confirmado</option>
+                <option value="Cancelado">Cancelado</option>
+                <option value="Realizado">Realizado</option>
+              </select>
+              <p className="text-[10px] text-blue-600 mt-2">* Alterar aqui sincroniza direto com a Planilha Sheets.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Início</label>
+                <p className="text-sm font-medium text-gray-800">{formatDate(selectedEvent['Início'])}</p>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Fim</label>
+                <p className="text-sm font-medium text-gray-800">{formatDate(selectedEvent['Fim'])}</p>
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
+                   Local
+                </label>
+                <p className="text-sm text-gray-800 bg-gray-50 p-2 rounded-md border border-gray-100">{selectedEvent['Local'] || 'Não especificado'}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Região</label>
+                  <p className="text-sm font-medium text-gray-800">{selectedEvent['Região']}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Articulador</label>
+                  <p className="text-sm font-medium text-gray-800">{selectedEvent['Articulador']}</p>
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Descrição / Notas</label>
+              <div className="mt-1 text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100 whitespace-pre-wrap min-h-[100px]">
+                {selectedEvent['Descrição'] || 'Nenhuma descrição fornecida no calendário.'}
+              </div>
+            </div>
+
+            {/* Status Temporal Tag */}
+            <div className="flex justify-center pt-4">
+               <span className={`text-xs px-4 py-1.5 rounded-full font-medium ${isPastEvent ? 'bg-gray-100 text-gray-500' : 'bg-emerald-100 text-emerald-700'}`}>
+                 {isPastEvent ? 'Esta agenda já passou' : 'Agenda futura'}
+               </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 flex flex-col md:flex-row selection:bg-emerald-200 selection:text-emerald-900">
+      
+      {/* Sidebar / Topnav */}
+      <nav className="bg-slate-900 text-white w-full md:w-64 flex-shrink-0 flex flex-col shadow-xl z-20">
+        <div className="p-6">
+          <h1 className="text-xl font-bold tracking-tight text-white">Tabulum</h1>
+          <p className="text-[10px] text-emerald-400 font-medium uppercase tracking-widest mt-1">GesTaAg • Marquito</p>
+        </div>
+        
+        <div className="flex flex-row md:flex-col gap-1 px-4 pb-4 md:pb-0 overflow-x-auto">
+          <button 
+            onClick={() => setActiveTab('list')}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'list' ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            Agendas
+          </button>
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+            Dashboard
+          </button>
+        </div>
+
+        <div className="mt-auto hidden md:block p-6">
+          <div className="bg-slate-800 rounded-lg p-4">
+            <p className="text-xs text-slate-400 leading-relaxed">Conectado via API Rest ao Google Sheets.</p>
+            <div className="flex items-center gap-2 mt-3">
+              <span className={`w-2 h-2 rounded-full ${API_URL ? 'bg-emerald-400' : 'bg-orange-400'}`}></span>
+              <span className="text-[10px] text-slate-300 font-bold uppercase">{API_URL ? 'Planilha Sincronizada' : 'Modo Demonstração (Mock)'}</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative">
+        {loading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+            <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
+            <p className="mt-4 text-sm font-medium text-gray-500">Sincronizando com a Planilha...</p>
+          </div>
+        ) : (
+          <div className="max-w-6xl mx-auto h-full">
+            {activeTab === 'list' && renderList()}
+            {activeTab === 'dashboard' && renderDashboard()}
+          </div>
+        )}
+      </main>
+
+      {/* Slide-over Panel for Details */}
+      {renderDetails()}
+      
+      {/* Global CSS for some smooth animations without libs */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      `}} />
+    </div>
+  );
+}
