@@ -20,15 +20,16 @@ const COLORS = {
   teal: '#007D8A',
   tealDark: '#00555E',
   black: '#111111',
-  white: '#Fdfcf0', // Off-white para fundo (estilo tela de pintura)
+  white: '#Fdfcf0', 
 };
 
 const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal, COLORS.crimsonDark, COLORS.mustardDark, COLORS.tealDark];
 
 const MOCK_DATA = [
   { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação de projetos de lei ambientais.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Região': 'Grande Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
-  { id: 3, 'Título': 'Reunião Associação Moradores', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Debate sobre saneamento básico.', 'Duração': 120, 'Local': 'Campeche - Florianópolis', 'Classe de Atividade': 'Comunidade', 'Região': 'Florianópolis (Sul)', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
+  { id: 3, 'Título': 'Reunião Associação Moradores', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Debate sobre saneamento básico.', 'Duração': 120, 'Local': 'Campeche - Florianópolis', 'Classe de Atividade': 'Comunidade', 'Região': 'Florianópolis (Sul da Ilha)', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
   { id: 4, 'Título': 'Visita Feira Orgânica', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 165600000).toISOString(), 'Descrição': 'Apoio aos produtores locais.', 'Duração': 120, 'Local': 'Chapecó', 'Classe de Atividade': 'Visita Técnica', 'Região': 'Oeste', 'Articulador': 'Pedro Alves', 'STATUS': 'Realizado' },
+  { id: 5, 'Título': 'Evento Genérico', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Nada', 'Duração': 120, 'Local': 'Desconhecido', 'Classe de Atividade': 'Outros Eventos', 'Região': 'Não definido', 'Articulador': 'Não definido', 'STATUS': 'Confirmado' },
 ];
 
 // ==========================================
@@ -51,10 +52,8 @@ const normalizeData = (data) => {
     const newItem = { id: item.id };
     const keys = Object.keys(item);
     
-    // 1. Preserva todos os dados originais
     keys.forEach(k => { newItem[k] = item[k]; });
     
-    // 2. Mapeia inteligentemente os cabeçalhos ignorando maiúsculas, espaços e acentos
     keys.forEach(k => {
       if (k === 'id') return;
       const normK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -71,7 +70,6 @@ const normalizeData = (data) => {
       if (normK === 'status') newItem['STATUS'] = item[k];
     });
 
-    // 3. Limpa possíveis erros de fórmula da planilha (#REF!, #N/A)
     Object.keys(newItem).forEach(k => {
       if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) {
         newItem[k] = '';
@@ -91,6 +89,7 @@ const SimpleBarChart = ({ data, title }) => {
     <div className="bg-[#Fdfcf0] p-5 border-[3px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px]">
       <h3 className="text-sm font-bold text-[#111111] mb-5 uppercase tracking-wider border-b-[3px] border-[#111111] pb-2">{title}</h3>
       <div className="space-y-4">
+        {data.length === 0 && <div className="text-xs font-bold text-gray-500 uppercase">Sem dados válidos</div>}
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
             <span className="text-xs font-bold text-[#111111] w-28 truncate" title={item.name}>{item.name}</span>
@@ -121,78 +120,144 @@ const SimplePieChart = ({ data, title }) => {
   return (
     <div className="bg-[#Fdfcf0] p-5 border-[3px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px] flex flex-col items-center">
       <h3 className="text-sm font-bold text-[#111111] mb-5 uppercase tracking-wider border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
-      <div className="relative w-40 h-40">
-        <svg viewBox="-1.1 -1.1 2.2 2.2" className="transform -rotate-90 w-full h-full drop-shadow-[4px_4px_0px_#111111]">
-          {/* Círculo de fundo para a borda grossa */}
-          <circle cx="0" cy="0" r="1.05" fill="#111111" />
-          {data.map((slice, i) => {
-            if (slice.value === 0) return null;
-            const percent = slice.value / total;
-            const startX = getCoordinatesForPercent(cumulativePercent)[0];
-            const startY = getCoordinatesForPercent(cumulativePercent)[1];
-            cumulativePercent += percent;
-            const endX = getCoordinatesForPercent(cumulativePercent)[0];
-            const endY = getCoordinatesForPercent(cumulativePercent)[1];
-            const largeArcFlag = percent > 0.5 ? 1 : 0;
-            const pathData = [
-              `M ${startX} ${startY}`,
-              `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-              `L 0 0`,
-            ].join(' ');
+      
+      {data.length === 0 ? (
+         <div className="flex-1 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">Sem dados válidos</div>
+      ) : (
+        <>
+          <div className="relative w-40 h-40">
+            <svg viewBox="-1.1 -1.1 2.2 2.2" className="transform -rotate-90 w-full h-full drop-shadow-[4px_4px_0px_#111111]">
+              <circle cx="0" cy="0" r="1.05" fill="#111111" />
+              {data.map((slice, i) => {
+                if (slice.value === 0) return null;
+                const percent = slice.value / total;
+                if (percent === 1) {
+                  return <circle key={i} cx="0" cy="0" r="1" fill={CHART_PALETTE[i % CHART_PALETTE.length]} stroke="#111111" strokeWidth="0.02" />
+                }
+                const startX = getCoordinatesForPercent(cumulativePercent)[0];
+                const startY = getCoordinatesForPercent(cumulativePercent)[1];
+                cumulativePercent += percent;
+                const endX = getCoordinatesForPercent(cumulativePercent)[0];
+                const endY = getCoordinatesForPercent(cumulativePercent)[1];
+                const largeArcFlag = percent > 0.5 ? 1 : 0;
+                const pathData = [
+                  `M ${startX} ${startY}`,
+                  `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                  `L 0 0`,
+                ].join(' ');
 
-            return (
-              <path 
-                key={i} 
-                d={pathData} 
-                fill={CHART_PALETTE[i % CHART_PALETTE.length]} 
-                stroke="#111111" 
-                strokeWidth="0.02"
-              />
-            );
-          })}
-        </svg>
-      </div>
-      <div className="mt-6 w-full flex flex-wrap gap-2 justify-center">
-        {data.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs font-bold text-[#111111] bg-white border-[2px] border-[#111111] px-2 py-1 shadow-[2px_2px_0px_0px_#111111]">
-            <span className="w-3 h-3 border-[1px] border-[#111111]" style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}></span>
-            {item.name} ({(item.value / total * 100).toFixed(0)}%)
+                return (
+                  <path 
+                    key={i} 
+                    d={pathData} 
+                    fill={CHART_PALETTE[i % CHART_PALETTE.length]} 
+                    stroke="#111111" 
+                    strokeWidth="0.02"
+                  />
+                );
+              })}
+            </svg>
           </div>
-        ))}
-      </div>
+          <div className="mt-6 w-full flex flex-wrap gap-2 justify-center">
+            {data.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs font-bold text-[#111111] bg-white border-[2px] border-[#111111] px-2 py-1 shadow-[2px_2px_0px_0px_#111111]">
+                <span className="w-3 h-3 border-[1px] border-[#111111]" style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}></span>
+                {item.name} ({(item.value / total * 100).toFixed(0)}%)
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
-const HeatmapGrid = ({ data, title, isFloripa }) => {
+// ==========================================
+// MAPA NATIVO (SVG PURO - ZERO DEPENDÊNCIAS)
+// ==========================================
+const NativeGeoMap = ({ data, title, isFloripa }) => {
+  // Mapeamento de coordenadas (0% a 100% relativo à caixa de desenho)
+  const regionsCoords = {
+    sc: {
+      'oeste': { x: 20, y: 45 },
+      'meio-oeste': { x: 40, y: 50 },
+      'planalto': { x: 60, y: 35 },
+      'norte': { x: 75, y: 25 },
+      'serra': { x: 55, y: 70 },
+      'sul': { x: 75, y: 85 },
+      'vale': { x: 80, y: 50 },
+      'grande florianopolis': { x: 88, y: 65 }
+    },
+    floripa: {
+      'norte da ilha': { x: 65, y: 25 },
+      'leste da ilha': { x: 75, y: 55 },
+      'sul da ilha': { x: 50, y: 80 },
+      'centro': { x: 55, y: 45 },
+      'continente': { x: 35, y: 40 }
+    }
+  };
+
+  const currentMap = isFloripa ? regionsCoords.floripa : regionsCoords.sc;
   const maxDensity = Math.max(...data.map(d => d.value), 1);
-  
+
+  // Silhuetas aproximadas em SVG puro para estética
+  const scPath = "M5,40 Q20,35 30,45 T60,30 Q80,20 90,40 Q95,60 85,75 Q75,95 60,85 Q45,75 50,60 Q40,50 5,40 Z";
+  const floripaIslandPath = "M55,10 Q70,20 80,50 Q85,80 50,90 Q30,85 45,60 Q40,40 55,10 Z";
+  const floripaContinentPath = "M20,30 Q35,30 40,45 Q35,55 20,50 Q10,40 20,30 Z";
+
   return (
     <div className="bg-[#Fdfcf0] p-5 border-[3px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex-1 min-w-[300px]">
       <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wider border-b-[3px] border-[#111111] pb-2">{title}</h3>
-      <p className="text-xs font-bold text-gray-500 mb-4">Intensidade de agenda por localidade</p>
+      <p className="text-xs font-bold text-gray-500 mb-4">Intensidade geográfica</p>
       
-      <div className={`grid ${isFloripa ? 'grid-cols-2' : 'grid-cols-3'} gap-3 h-48`}>
+      <div className="w-full h-64 bg-white border-[2px] border-[#111111] relative overflow-hidden flex items-center justify-center">
+        
+        {/* Fundo do Mapa (Formas Geométricas Simples) */}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full opacity-20 drop-shadow-md">
+          {isFloripa ? (
+            <>
+              <path d={floripaContinentPath} fill="#007D8A" stroke="#111111" strokeWidth="1" />
+              <path d={floripaIslandPath} fill="#007D8A" stroke="#111111" strokeWidth="1" />
+            </>
+          ) : (
+             <path d={scPath} fill="#007D8A" stroke="#111111" strokeWidth="1" />
+          )}
+        </svg>
+
+        {/* Pontos de Calor */}
+        {data.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
+            <span className="text-xs font-bold uppercase text-gray-400">Sem agendas na região</span>
+          </div>
+        )}
+
         {data.map((item, i) => {
+          const normName = item.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          
+          // Encontra a coordenada que mais se parece com o nome da região
+          const coordKey = Object.keys(currentMap).find(k => normName.includes(k));
+          const coord = coordKey ? currentMap[coordKey] : null;
+          
+          if (!coord) return null;
+
           const intensity = item.value / maxDensity;
-          // Gradações baseadas na paleta solicitada
-          let bgColor = '#Fdfcf0';
-          let textColor = '#111111';
-          
-          if (intensity > 0.7) { bgColor = COLORS.crimson; textColor = '#FFFFFF'; }
-          else if (intensity > 0.4) { bgColor = COLORS.mustard; textColor = '#111111'; }
-          else if (intensity > 0) { bgColor = COLORS.teal; textColor = '#FFFFFF'; }
-          
+          const size = 15 + (intensity * 30); // Bolhas variam de 15px a 45px
+
           return (
-            <div key={i} 
-                 className="border-[3px] border-[#111111] flex items-center justify-center relative group transition-transform hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#111111]"
-                 style={{ backgroundColor: bgColor }}>
-              <span className={`text-xs font-black uppercase tracking-tight text-center px-2`} style={{ color: textColor }}>
-                {item.name.substring(0, 10)}{item.name.length > 10 ? '...' : ''}
-              </span>
-              <div className="absolute hidden group-hover:block bg-[#111111] text-white font-bold text-xs p-2 -top-10 border-[2px] border-white whitespace-nowrap z-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)]">
-                {item.name}: {item.value} agendas
+            <div 
+              key={i} 
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group z-10"
+              style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
+            >
+              <div 
+                className="rounded-full bg-[#C1272D] border-[3px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] transition-all duration-300 hover:scale-110 flex items-center justify-center"
+                style={{ width: `${size}px`, height: `${size}px`, opacity: 0.8 + (intensity * 0.2) }}
+              >
+                <span className="text-white font-black text-[10px]">{item.value}</span>
               </div>
+              <span className="mt-1 text-[9px] font-black uppercase text-[#111111] bg-white border-[1px] border-[#111111] px-1 whitespace-nowrap">
+                {item.name}
+              </span>
             </div>
           );
         })}
@@ -205,7 +270,7 @@ const HeatmapGrid = ({ data, title, isFloripa }) => {
 // APLICATIVO PRINCIPAL
 // ==========================================
 export default function App() {
-  const [activeTab, setActiveTab] = useState('list');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -218,23 +283,18 @@ export default function App() {
     const fetchData = async () => {
       try {
         if (!API_URL) {
-          console.warn("URL da API não encontrada. Modo demonstração ativado.");
           setEvents(normalizeData(MOCK_DATA));
         } else {
-          // IMPORTANTE: redirect: "follow" é obrigatório para o Google Apps Script
           const response = await fetch(API_URL, { redirect: "follow" });
-          const text = await response.text(); // Lemos como texto primeiro para evitar erro de parse silencioso
-          
+          const text = await response.text();
           try {
             const data = JSON.parse(text);
             setEvents(normalizeData(data));
           } catch (e) {
-            console.error("A API não retornou um JSON válido. Resposta recebida:", text.substring(0, 200));
             setEvents(normalizeData(MOCK_DATA));
           }
         }
       } catch (error) {
-        console.error("Erro na conexão com a API:", error);
         setEvents(normalizeData(MOCK_DATA));
       } finally {
         setLoading(false);
@@ -286,7 +346,6 @@ export default function App() {
       const counts = {};
       events.forEach(ev => {
         let val = ev[key];
-        // Se a célula estiver vazia ou for limpa pelo normalizador
         if (!val || val.toString().trim() === '') {
           val = 'Não definido';
         }
@@ -295,21 +354,27 @@ export default function App() {
       return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     };
 
-    const todasRegioes = agg('Região');
-    
-    // Regra flexível: qualquer região que NÃO contenha "florianópolis" ou "floripa" vai pro estado
-    const scRegioes = todasRegioes.filter(r => !r.name.toLowerCase().includes('florianópolis') && !r.name.toLowerCase().includes('floripa') && r.name !== 'Não definido');
-    
-    // Regra flexível: qualquer região que contenha "florianópolis" ou "floripa" vai pra capital
-    const floripaRegioes = todasRegioes.filter(r => r.name.toLowerCase().includes('florianópolis') || r.name.toLowerCase().includes('floripa'));
+    const normalizerFilter = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-    return {
-      classes: agg('Classe de Atividade'),
-      regioes: todasRegioes,
-      articuladores: agg('Articulador'),
-      scHeatmap: scRegioes.length > 0 ? scRegioes : [{name: 'Sem dados fora da capital', value: 0}],
-      floripaHeatmap: floripaRegioes.length > 0 ? floripaRegioes : [{name: 'Sem dados na capital', value: 0}]
-    };
+    // Filtra removendo os 'Outros Eventos' e 'Não definido'
+    const classes = agg('Classe de Atividade').filter(c => 
+      normalizerFilter(c.name) !== 'outros eventos' && 
+      normalizerFilter(c.name) !== 'nao definido'
+    );
+
+    const articuladores = agg('Articulador').filter(a => 
+      normalizerFilter(a.name) !== 'nao definido'
+    );
+
+    const todasRegioes = agg('Região').filter(r => 
+      normalizerFilter(r.name) !== 'nao definido'
+    );
+    
+    // Filtro Geográfico inteligente
+    const scRegioes = todasRegioes.filter(r => !normalizerFilter(r.name).includes('florianopolis') && !normalizerFilter(r.name).includes('floripa'));
+    const floripaRegioes = todasRegioes.filter(r => normalizerFilter(r.name).includes('florianopolis') || normalizerFilter(r.name).includes('floripa'));
+
+    return { classes, regioes: todasRegioes, articuladores, scHeatmap: scRegioes, floripaHeatmap: floripaRegioes };
   }, [events]);
 
   const renderDashboard = () => (
@@ -330,16 +395,14 @@ export default function App() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-        <HeatmapGrid data={dashboardStats.scHeatmap} title="Calor - Santa Catarina" isFloripa={false} />
-        <HeatmapGrid data={dashboardStats.floripaHeatmap} title="Calor - Florianópolis" isFloripa={true} />
+        <NativeGeoMap data={dashboardStats.scHeatmap} title="Calor - Santa Catarina" isFloripa={false} />
+        <NativeGeoMap data={dashboardStats.floripaHeatmap} title="Calor - Florianópolis" isFloripa={true} />
       </div>
     </div>
   );
 
   const renderList = () => (
     <div className="space-y-6 animate-fade-in pb-10">
-      
-      {/* Controles Mondrian */}
       <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-5 border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111]">
         <div className="flex-1 relative">
           <input 
@@ -351,7 +414,7 @@ export default function App() {
           />
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <select 
             className="bg-[#Fdfcf0] border-[3px] border-[#111111] font-bold text-sm uppercase px-4 py-3 focus:outline-none cursor-pointer"
             value={timeFilter}
@@ -406,7 +469,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Tag de Status Geométrico */}
                     <div className="absolute bottom-4 right-4 border-[2px] border-[#111111] px-2 py-1 bg-white text-[10px] font-black uppercase" style={{ color: statusColor, borderColor: statusColor }}>
                       {ev['STATUS'] || 'Pendente'}
                     </div>
@@ -451,8 +513,6 @@ export default function App() {
 
   const renderDetails = () => {
     if (!selectedEvent) return null;
-    const isPastEvent = isPast(selectedEvent['Início']);
-
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end animate-fade-in">
         <div className="bg-[#Fdfcf0] w-full max-w-lg h-full border-l-[6px] border-[#111111] flex flex-col transform transition-transform translate-x-0 overflow-y-auto shadow-[-10px_0px_0px_0px_rgba(0,0,0,0.2)]">
@@ -530,7 +590,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#Fdfcf0] font-sans text-[#111111] flex flex-col md:flex-row selection:bg-[#EAA221] selection:text-[#111111]">
       
-      {/* Sidebar Mondrian */}
       <nav className="bg-[#111111] text-white w-full md:w-72 flex-shrink-0 flex flex-col z-20 border-r-[6px] border-[#111111]">
         <div className="p-8 border-b-[4px] border-white bg-[#C1272D]">
           <h1 className="text-4xl font-black tracking-tighter text-white border-b-[4px] border-white pb-2 inline-block">TABULUM</h1>
@@ -539,18 +598,18 @@ export default function App() {
         
         <div className="flex flex-row md:flex-col p-4 gap-4 overflow-x-auto">
           <button 
-            onClick={() => setActiveTab('list')}
-            className={`flex items-center gap-3 px-5 py-4 border-[3px] border-white text-sm font-black uppercase transition-all whitespace-nowrap shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'bg-[#111111] text-white hover:bg-white hover:text-[#111111]'}`}
-          >
-            <span className="w-3 h-3 bg-white border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : 'white'}}></span>
-            Agendas
-          </button>
-          <button 
             onClick={() => setActiveTab('dashboard')}
             className={`flex items-center gap-3 px-5 py-4 border-[3px] border-white text-sm font-black uppercase transition-all whitespace-nowrap shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'dashboard' ? 'bg-[#007D8A] text-white border-[#111111] shadow-[4px_4px_0px_0px_#007D8A]' : 'bg-[#111111] text-white hover:bg-white hover:text-[#111111]'}`}
           >
             <span className="w-3 h-3 bg-white border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='dashboard' ? '#111111' : 'white'}}></span>
             Dashboard
+          </button>
+          <button 
+            onClick={() => setActiveTab('list')}
+            className={`flex items-center gap-3 px-5 py-4 border-[3px] border-white text-sm font-black uppercase transition-all whitespace-nowrap shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'bg-[#111111] text-white hover:bg-white hover:text-[#111111]'}`}
+          >
+            <span className="w-3 h-3 bg-white border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : 'white'}}></span>
+            Agendas
           </button>
         </div>
 
@@ -573,8 +632,8 @@ export default function App() {
           </div>
         ) : (
           <div className="max-w-6xl mx-auto h-full">
-            {activeTab === 'list' && renderList()}
             {activeTab === 'dashboard' && renderDashboard()}
+            {activeTab === 'list' && renderList()}
           </div>
         )}
       </main>
@@ -585,7 +644,6 @@ export default function App() {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        /* Font geometry tuning to match Mondrian feel without external fonts */
         * { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
       `}} />
     </div>
