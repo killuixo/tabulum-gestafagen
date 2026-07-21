@@ -329,6 +329,7 @@ export default function App() {
   const [municipioFilter, setMunicipioFilter] = useState('all');
   const [articuladorFilter, setArticuladorFilter] = useState('all');
   const [classeFilter, setClasseFilter] = useState('all');
+  const [locationScope, setLocationScope] = useState('all'); // NOVO: Filtro mestre de escopo
   
   const [viewMode, setViewMode] = useState('cards');
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -372,13 +373,18 @@ export default function App() {
       if (articuladorFilter !== 'all' && ev['Articulador'] !== articuladorFilter) return false;
       if (classeFilter !== 'all' && ev['Classe de Atividade'] !== classeFilter) return false;
       
+      // APLICAÇÃO DO FILTRO MESTRE (CAPITAL VS INTERIOR)
+      const isFloripa = normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa');
+      if (locationScope === 'capital' && !isFloripa) return false;
+      if (locationScope === 'interior' && isFloripa) return false;
+
       if (search) {
         const term = normalizerFilter(search);
         return normalizerFilter(ev['Título']).includes(term) || normalizerFilter(ev['Local']).includes(term);
       }
       return true;
     }).sort((a, b) => new Date(a['Início']) - new Date(b['Início']));
-  }, [events, search, timeFilter, municipioFilter, articuladorFilter, classeFilter]);
+  }, [events, search, timeFilter, municipioFilter, articuladorFilter, classeFilter, locationScope]);
 
   const dashboardStats = useMemo(() => {
     const agg = (key) => {
@@ -424,6 +430,20 @@ export default function App() {
 
   const renderGlobalFilters = () => (
     <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10 w-full">
+      
+      {/* BOTÕES DE ESCOPO MESTRE (DESTACADOS) */}
+      <div className="flex flex-col md:flex-row gap-4 mb-2">
+        <button onClick={() => setLocationScope('all')} className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 ${locationScope === 'all' ? 'bg-[#111111] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}>
+          GERAL (SC + CAPITAL)
+        </button>
+        <button onClick={() => setLocationScope('capital')} className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 ${locationScope === 'capital' ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}>
+          SOMENTE CAPITAL
+        </button>
+        <button onClick={() => setLocationScope('interior')} className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 ${locationScope === 'interior' ? 'bg-[#C1272D] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}>
+          SOMENTE INTERIOR
+        </button>
+      </div>
+
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         <input 
           type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
