@@ -152,6 +152,7 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
   const mapInstanceRef = useRef(null);
   const geoJsonLayerRef = useRef(null);
 
+  // Escala de cores progressiva com as 3 cores permitidas
   const getMapColor = (value, maxVal) => {
     if (!value || value === 0) return 'transparent';
     const intensity = value / maxVal;
@@ -180,7 +181,6 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
       const map = mapInstanceRef.current;
       const maxVal = Math.max(...data.map(d => d.value), 1);
 
-      // Limpa camadas antigas
       if (geoJsonLayerRef.current) {
         map.removeLayer(geoJsonLayerRef.current);
       }
@@ -188,7 +188,7 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
       geoJsonLayerRef.current = window.L.layerGroup().addTo(map);
 
       if (!isFloripa) {
-        // MAPA DE SANTA CATARINA: Borda exata dos municípios usando GeoJSON do IBGE/Github
+        // MAPA DE SANTA CATARINA: Borda exata dos municípios com Tooltip
         try {
           const res = await fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json');
           const geoData = await res.json();
@@ -214,7 +214,7 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
               if (found) {
                 layer.bindTooltip(`
                   <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
-                    ${feature.properties.name}: ${found.value}
+                    ${feature.properties.name}: <span style="color: #C1272D; font-size: 12px;">${found.value}</span> Agendas
                   </div>
                 `, { direction: 'top', className: 'custom-leaflet-tooltip' });
               }
@@ -225,7 +225,7 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
           console.error("Erro ao carregar GeoJSON de SC", e);
         }
       } else {
-        // MAPA DE FLORIANÓPOLIS: Zonas/Fronteiras definidas desenhadas via Polígonos
+        // MAPA DE FLORIANÓPOLIS: Zonas/Fronteiras definidas desenhadas com Tooltip
         data.forEach(item => {
           const regName = normalizerFilter(item.name);
           let polygonCoords = null;
@@ -246,7 +246,7 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
             
             polygon.bindTooltip(`
               <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
-                ${item.name}: ${item.value}
+                ${item.name}: <span style="color: #C1272D; font-size: 12px;">${item.value}</span> Agendas
               </div>
             `, { direction: 'center', className: 'custom-leaflet-tooltip' });
             
@@ -276,9 +276,15 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
   return (
     <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full relative">
       <h3 className="text-[12px] font-black text-[#111111] mb-2 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2">{title}</h3>
-      <p className="text-[9px] font-black text-[#111111] opacity-60 uppercase tracking-widest mb-4">Mapa Coroplético (Fronteiras)</p>
       
-      <div className="w-full h-96 border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
+      {/* Legenda de Escala de Cores */}
+      <div className="flex gap-4 mb-4">
+        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#007D8A] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Baixa</span></div>
+        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#EAA221] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Média</span></div>
+        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#C1272D] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Alta</span></div>
+      </div>
+      
+      <div className="w-full h-[500px] border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
         {data.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#111111] opacity-50 uppercase z-10 bg-[#Fdfcf0]">Sem agendas na região</div>
         ) : (
@@ -361,7 +367,7 @@ export default function App() {
         let val = ev[key];
         if (!val || val.toString().trim() === '') return;
         const norm = normalizerFilter(val);
-        // Regra Estrita: Bloqueia lixo ("Outros Eventos" e "Não Definido")
+        // Bloqueio ESTRITO de lixo (Outros Eventos / Não Definido)
         if (norm === 'outros eventos' || norm === 'nao definido') return;
         counts[val] = (counts[val] || 0) + 1;
       });
@@ -371,15 +377,15 @@ export default function App() {
     let pastCount = 0; let futureCount = 0;
     filteredEvents.forEach(ev => isPast(ev['Início']) ? pastCount++ : futureCount++);
     const temporalStats = [
-      { name: 'Realizadas', value: pastCount },
-      { name: 'Futuras', value: futureCount }
+      { name: 'Realizadas (Passado)', value: pastCount },
+      { name: 'Futuras (Acontecerão)', value: futureCount }
     ].filter(s => s.value > 0);
 
     const scHeatmap = agg('Município'); // COLUNA I
     const floripaHeatmapMap = {};
     filteredEvents.forEach(ev => {
       if (normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa')) {
-        const reg = ev['Região']; // COLUNA H para Floripa
+        const reg = ev['Região']; // COLUNA H (Para Floripa)
         if (reg && normalizerFilter(reg) !== 'nao definido') {
           floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
         }
@@ -397,7 +403,7 @@ export default function App() {
   }, [filteredEvents]);
 
   const renderGlobalFilters = () => (
-    <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10">
+    <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10 w-full">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         <input 
           type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
@@ -405,9 +411,9 @@ export default function App() {
           value={search} onChange={(e) => setSearch(e.target.value)}
         />
         <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] self-start md:self-auto flex-wrap">
-          <button onClick={() => setTimeFilter('all')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'all' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Tudo</button>
-          <button onClick={() => setTimeFilter('future')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'future' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Futuras</button>
-          <button onClick={() => setTimeFilter('past')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'past' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Realizadas</button>
+          <button onClick={() => setTimeFilter('all')} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 ${timeFilter === 'all' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Tudo</button>
+          <button onClick={() => setTimeFilter('future')} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 ${timeFilter === 'future' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Futuras</button>
+          <button onClick={() => setTimeFilter('past')} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 ${timeFilter === 'past' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Realizadas</button>
         </div>
       </div>
 
@@ -433,7 +439,7 @@ export default function App() {
   );
 
   const renderDashboard = () => (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-center border-[4px] border-[#111111] bg-[#ffffff] p-4 shadow-[6px_6px_0px_0px_#111111]">
         <h2 className="text-xl font-black text-[#111111] tracking-tighter uppercase">Visão Geral (Filtrada)</h2>
         <span className="text-[12px] font-black px-4 py-2 bg-[#111111] text-[#Fdfcf0] border-[3px] border-[#111111] mt-2 md:mt-0">
@@ -444,12 +450,13 @@ export default function App() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
         <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Atividades (Tempo)" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Evolução Temporal" /></div>
       </div>
 
+      {/* Mapas Ocupando Tela Cheia para melhor visualização geográfica */}
       <div className="grid grid-cols-1 gap-8 mt-8">
-        <ChoroplethMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina (Col I)" isFloripa={false} />
-        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis (Col H)" isFloripa={true} />
+        <ChoroplethMap data={dashboardStats.scHeatmap} title="Geografia Coroplética - Santa Catarina (Col I)" isFloripa={false} />
+        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Geografia Coroplética - Florianópolis (Col H)" isFloripa={true} />
       </div>
     </div>
   );
@@ -458,8 +465,8 @@ export default function App() {
     <div className="space-y-6 pb-10 relative z-0">
       <div className="flex justify-end">
         <div className="flex bg-[#111111] p-1 border-[3px] border-[#111111]">
-          <button onClick={() => setViewMode('cards')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors ${viewMode === 'cards' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Cards</button>
-          <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors ${viewMode === 'table' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Lista</button>
+          <button onClick={() => setViewMode('cards')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'cards' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Cards</button>
+          <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'table' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Lista</button>
         </div>
       </div>
 
@@ -468,7 +475,7 @@ export default function App() {
       ) : (
         <>
           {viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredEvents.map((ev, i) => (
                 <div key={i} onClick={() => setSelectedEvent(ev)} className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] hover:shadow-[10px_10px_0px_0px_#111111] hover:-translate-y-1 transition-all cursor-pointer flex flex-col h-full relative">
                   <div className="absolute top-0 right-0 w-8 h-8 border-l-[4px] border-b-[4px] border-[#111111]" style={{ backgroundColor: isFuture(ev['Início']) ? COLORS.teal : '#cccccc' }}></div>
@@ -479,12 +486,20 @@ export default function App() {
                   
                   <h3 className="font-black text-lg text-[#111111] leading-tight mb-4 uppercase line-clamp-3">{ev['Título']}</h3>
                   
+                  {/* Informações dos cards 100% livres do "bonequinho roxo", usando quadrados de cor Mondrian */}
                   <div className="mt-auto space-y-2 border-t-[3px] border-[#111111] pt-3">
-                    <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-1.5"><span className="text-lg leading-none">📅</span> {formatDate(ev['Início'])}</p>
-                    <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-1.5"><span className="text-lg leading-none">📍</span> {ev['Município']} {ev['Região'] ? `- ${ev['Região']}` : ''}</p>
-                    <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-1.5"><span className="text-lg leading-none">👤</span> {ev['Articulador']}</p>
+                    <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-2">
+                       <span className="w-2.5 h-2.5 bg-[#007D8A] border-2 border-[#111111] block flex-shrink-0"></span> {formatDate(ev['Início'])}
+                    </p>
+                    <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-2">
+                       <span className="w-2.5 h-2.5 bg-[#C1272D] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Município']} {ev['Região'] ? `- ${ev['Região']}` : ''}
+                    </p>
+                    <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-2">
+                       <span className="w-2.5 h-2.5 bg-[#EAA221] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Articulador']}
+                    </p>
                   </div>
-                  <div className="absolute bottom-3 right-3 border-[2px] border-[#111111] px-1.5 py-0.5 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
+                  
+                  <div className="absolute bottom-3 right-3 border-[3px] border-[#111111] px-2 py-1 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
                 </div>
               ))}
             </div>
@@ -552,7 +567,7 @@ export default function App() {
             <div className="font-black uppercase tracking-widest text-[#111111] text-lg bg-[#ffffff] px-4 py-2 border-[4px] border-[#111111]">Carregando Dados...</div>
           </div>
         ) : (
-          <div className="max-w-7xl mx-auto h-full animate-fade-in">
+          <div className="w-full max-w-7xl mx-auto h-full animate-fade-in">
             {renderGlobalFilters()}
             {activeTab === 'list' && renderList()}
             {activeTab === 'dashboard' && renderDashboard()}
@@ -590,6 +605,7 @@ export default function App() {
         </div>
       )}
       
+      {/* CSS para Tooltip Inteligente do Leaflet (Estilo Mondrian) */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
@@ -605,7 +621,8 @@ export default function App() {
            background: #ffffff !important; 
            color: #111111 !important;
            box-shadow: 4px 4px 0px 0px #111111 !important; 
-           padding: 6px !important;
+           padding: 8px 12px !important;
+           white-space: nowrap !important;
         }
         .custom-leaflet-tooltip::before { display: none !important; }
       `}} />
