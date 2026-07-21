@@ -44,6 +44,45 @@ const isFuture = (dateString) => new Date(dateString) >= new Date();
 const isPast = (dateString) => new Date(dateString) < new Date();
 
 // ==========================================
+// FUNÇÃO DE NORMALIZAÇÃO INTELIGENTE DE DADOS
+// ==========================================
+const normalizeData = (data) => {
+  return data.map(item => {
+    const newItem = { id: item.id };
+    const keys = Object.keys(item);
+    
+    // 1. Preserva todos os dados originais
+    keys.forEach(k => { newItem[k] = item[k]; });
+    
+    // 2. Mapeia inteligentemente os cabeçalhos ignorando maiúsculas, espaços e acentos
+    keys.forEach(k => {
+      if (k === 'id') return;
+      const normK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      
+      if (normK.includes('titulo')) newItem['Título'] = item[k];
+      if (normK.includes('inicio')) newItem['Início'] = item[k];
+      if (normK.includes('fim')) newItem['Fim'] = item[k];
+      if (normK.includes('descri')) newItem['Descrição'] = item[k];
+      if (normK.includes('duracao')) newItem['Duração'] = item[k];
+      if (normK.includes('local')) newItem['Local'] = item[k];
+      if (normK.includes('classe') || normK.includes('tipo')) newItem['Classe de Atividade'] = item[k];
+      if (normK.includes('regiao')) newItem['Região'] = item[k];
+      if (normK.includes('articulador') || normK.includes('responsavel')) newItem['Articulador'] = item[k];
+      if (normK === 'status') newItem['STATUS'] = item[k];
+    });
+
+    // 3. Limpa possíveis erros de fórmula da planilha (#REF!, #N/A)
+    Object.keys(newItem).forEach(k => {
+      if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) {
+        newItem[k] = '';
+      }
+    });
+    
+    return newItem;
+  });
+};
+
+// ==========================================
 // COMPONENTES GRÁFICOS NATIVOS (MONDRIAN)
 // ==========================================
 const SimpleBarChart = ({ data, title }) => {
@@ -180,7 +219,7 @@ export default function App() {
       try {
         if (!API_URL) {
           console.warn("URL da API não encontrada. Modo demonstração ativado.");
-          setEvents(MOCK_DATA);
+          setEvents(normalizeData(MOCK_DATA));
         } else {
           // IMPORTANTE: redirect: "follow" é obrigatório para o Google Apps Script
           const response = await fetch(API_URL, { redirect: "follow" });
@@ -188,15 +227,15 @@ export default function App() {
           
           try {
             const data = JSON.parse(text);
-            setEvents(data);
+            setEvents(normalizeData(data));
           } catch (e) {
             console.error("A API não retornou um JSON válido. Resposta recebida:", text.substring(0, 200));
-            setEvents(MOCK_DATA);
+            setEvents(normalizeData(MOCK_DATA));
           }
         }
       } catch (error) {
         console.error("Erro na conexão com a API:", error);
-        setEvents(MOCK_DATA);
+        setEvents(normalizeData(MOCK_DATA));
       } finally {
         setLoading(false);
       }
@@ -246,22 +285,30 @@ export default function App() {
     const agg = (key) => {
       const counts = {};
       events.forEach(ev => {
-        const val = ev[key] || 'Não definido';
+        let val = ev[key];
+        // Se a célula estiver vazia ou for limpa pelo normalizador
+        if (!val || val.toString().trim() === '') {
+          val = 'Não definido';
+        }
         counts[val] = (counts[val] || 0) + 1;
       });
       return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     };
 
     const todasRegioes = agg('Região');
-    const scRegioes = todasRegioes.filter(r => !r.name.toLowerCase().includes('florianópolis (') && r.name !== 'Não definido');
-    const floripaRegioes = todasRegioes.filter(r => r.name.toLowerCase().includes('florianópolis ('));
+    
+    // Regra flexível: qualquer região que NÃO contenha "florianópolis" ou "floripa" vai pro estado
+    const scRegioes = todasRegioes.filter(r => !r.name.toLowerCase().includes('florianópolis') && !r.name.toLowerCase().includes('floripa') && r.name !== 'Não definido');
+    
+    // Regra flexível: qualquer região que contenha "florianópolis" ou "floripa" vai pra capital
+    const floripaRegioes = todasRegioes.filter(r => r.name.toLowerCase().includes('florianópolis') || r.name.toLowerCase().includes('floripa'));
 
     return {
       classes: agg('Classe de Atividade'),
       regioes: todasRegioes,
       articuladores: agg('Articulador'),
-      scHeatmap: scRegioes.length > 0 ? scRegioes : [{name: 'Oeste', value: 1}, {name: 'Norte', value: 2}, {name: 'Sul', value: 1}],
-      floripaHeatmap: floripaRegioes.length > 0 ? floripaRegioes : [{name: 'Norte da Ilha', value: 2}, {name: 'Centro', value: 4}]
+      scHeatmap: scRegioes.length > 0 ? scRegioes : [{name: 'Sem dados fora da capital', value: 0}],
+      floripaHeatmap: floripaRegioes.length > 0 ? floripaRegioes : [{name: 'Sem dados na capital', value: 0}]
     };
   }, [events]);
 
