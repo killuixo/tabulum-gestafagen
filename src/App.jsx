@@ -282,15 +282,28 @@ const ChoroplethMap = ({ data, title, isFloripa }) => {
     };
 
     if (!window.L) {
-      const css = document.createElement('link');
-      css.rel = 'stylesheet';
-      css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(css);
+      if (!document.getElementById('leaflet-css')) {
+        const css = document.createElement('link');
+        css.id = 'leaflet-css';
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(css);
+      }
 
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => { if (isMounted) initMap(); };
-      document.head.appendChild(script);
+      if (!document.getElementById('leaflet-script')) {
+        const script = document.createElement('script');
+        script.id = 'leaflet-script';
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.onload = () => { if (isMounted) initMap(); };
+        document.head.appendChild(script);
+      } else {
+        const checkInterval = setInterval(() => {
+          if (window.L) {
+            clearInterval(checkInterval);
+            if (isMounted) initMap();
+          }
+        }, 100);
+      }
     } else {
       initMap();
     }
@@ -459,11 +472,11 @@ export default function App() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <select value={municipioFilter} onChange={(e) => setMunicipioFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODOS MUNICÍPIOS (COL I)</option>
+          <option value="all">TODOS MUNICÍPIOS</option>
           {filterOptions.municipios.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={articuladorFilter} onChange={(e) => setArticuladorFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODOS ARTICULADORES (COL H)</option>
+          <option value="all">TODOS ARTICULADORES</option>
           {filterOptions.articuladores.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={classeFilter} onChange={(e) => setClasseFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
@@ -485,13 +498,13 @@ export default function App() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores (Col H)" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores" /></div>
         <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Evolução Temporal" /></div>
       </div>
 
       <div className="grid grid-cols-1 gap-8 mt-8">
-        <ChoroplethMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina (Col I)" isFloripa={false} />
-        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis (Leitura de Col F)" isFloripa={true} />
+        <ChoroplethMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina" isFloripa={false} />
+        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis" isFloripa={true} />
       </div>
     </div>
   );
@@ -631,7 +644,7 @@ export default function App() {
                 <p className="text-sm font-bold uppercase">{selectedEvent['Município']} {normalizerFilter(selectedEvent['Município']).includes('florianopolis') ? `/ ${getFloripaRegion(selectedEvent)}` : ''}</p></div>
                 <div><label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Articulador']}</p></div>
-                <div><label className="text-[9px] uppercase font-black text-[#C1272D] block">Local Físico (Bruto)</label>
+                <div><label className="text-[9px] uppercase font-black text-[#C1272D] block">Local Físico</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Local']}</p></div>
               </div>
             </div>
