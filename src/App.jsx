@@ -44,11 +44,11 @@ const normalizerFilter = (str) => {
 
 const toProperCase = (str) => {
   if (!str || typeof str !== 'string') return str;
-  return str.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  // Expressão regular aprimorada para lidar com acentos em português (Resolve FlorianóPolis)
+  return str.trim().toLowerCase().replace(/(?:^|[\s(/-])[a-zà-ÿ]/gi, c => c.toUpperCase());
 };
 
 const FLORIPA_GEO = [
-  { k: 'centro', b: 'Centro', d: 'Sede', r: 'Centro' },
   { k: 'alesc', b: 'Centro', d: 'Sede', r: 'Centro' },
   { k: 'osni regis', b: 'Centro', d: 'Sede', r: 'Centro' },
   { k: 'alfandega', b: 'Centro', d: 'Sede', r: 'Centro' },
@@ -104,8 +104,13 @@ const FLORIPA_GEO = [
   { k: 'carianos', b: 'Carianos', d: 'Sede', r: 'Sul da Ilha' },
   { k: 'caieira', b: 'Caieira', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
   { k: 'solidao', b: 'Solidão', d: 'Pântano do Sul', r: 'Sul da Ilha' },
-  { k: 'naufragados', b: 'Naufragados', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' }
+  { k: 'naufragados', b: 'Naufragados', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
+  { k: 'centro', b: 'Centro', d: 'Sede', r: 'Centro' }
 ];
+
+const getFloripaRegion = (evento) => {
+  return evento['Região Floripa'] || 'Centro';
+};
 
 const enrichFloripaLocation = (evento) => {
   const textToSearch = [evento['Local'] || '', evento['Título'] || '', evento['Descrição'] || ''].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -422,7 +427,15 @@ export default function App() {
   
   const [viewMode, setViewMode] = useState('cards');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  
   const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'desc' });
+  const [articuladorInputLocal, setArticuladorInputLocal] = useState('');
+
+  useEffect(() => {
+    if (selectedEvent) {
+      setArticuladorInputLocal(selectedEvent['ARTICULADOR - INPUT'] || '');
+    }
+  }, [selectedEvent]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -443,6 +456,18 @@ export default function App() {
     setEvents(events.map(ev => ev.id === id ? { ...ev, 'STATUS': newStatus } : ev));
     if (selectedEvent && selectedEvent.id === id) setSelectedEvent({ ...selectedEvent, 'STATUS': newStatus });
     if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, status: newStatus }), redirect: "follow" }).catch(()=>{});
+  };
+
+  const handleUpdateArticulador = async (id, val) => {
+    const normVal = val ? toProperCase(val) : '';
+    setEvents(events.map(ev => {
+      if (ev.id === id) return { ...ev, 'ARTICULADOR - INPUT': val, 'Articulador': normVal || ev['Articulador'] };
+      return ev;
+    }));
+    if (selectedEvent && selectedEvent.id === id) {
+      setSelectedEvent({ ...selectedEvent, 'ARTICULADOR - INPUT': val, 'Articulador': normVal || selectedEvent['Articulador'] });
+    }
+    if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, articuladorInput: val }), redirect: "follow" }).catch(()=>{});
   };
 
   const filterOptions = useMemo(() => {
@@ -720,11 +745,35 @@ export default function App() {
               <select value={selectedEvent['STATUS'] || 'Pendente'} onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} className="w-full bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-[#111111] text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none">
                 <option value="Pendente">Pendente</option><option value="Confirmado">Confirmado</option><option value="Realizado">Realizado</option>
               </select>
+
               <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] space-y-4 text-[#111111]">
                 <div><label className="text-[9px] uppercase font-black text-[#007D8A] block">Município / Região (Floripa)</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Município']} {normalizerFilter(selectedEvent['Município']).includes('florianopolis') ? `/ ${getFloripaRegion(selectedEvent)}` : ''}</p></div>
-                <div><label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
-                <p className="text-sm font-bold uppercase">{selectedEvent['Articulador']}</p></div>
+                
+                <div>
+                  <label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
+                  <p className="text-sm font-bold uppercase">{selectedEvent['Articulador']}</p>
+                </div>
+                
+                <div className="border-t-[2px] border-dashed border-[#111111] pt-3">
+                  <label className="text-[9px] uppercase font-black text-[#EAA221] block">Forçar Articulador Manual (Col K)</label>
+                  <div className="flex gap-2 mt-1">
+                    <input 
+                      type="text" 
+                      placeholder="Nome manual..." 
+                      value={articuladorInputLocal} 
+                      onChange={(e) => setArticuladorInputLocal(e.target.value)} 
+                      className="flex-1 bg-[#Fdfcf0] border-[3px] border-[#111111] font-black text-[#111111] text-[10px] uppercase px-2 py-1 outline-none"
+                    />
+                    <button 
+                      onClick={() => handleUpdateArticulador(selectedEvent.id, articuladorInputLocal)} 
+                      className="bg-[#111111] text-[#Fdfcf0] border-[3px] border-[#111111] font-black uppercase text-[9px] px-3 hover:bg-[#333333] transition-colors"
+                    >
+                      Salvar
+                    </button>
+                  </div>
+                </div>
+
                 <div><label className="text-[9px] uppercase font-black text-[#C1272D] block">Local Físico</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Local']}</p></div>
               </div>
