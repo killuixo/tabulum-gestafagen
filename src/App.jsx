@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 // ==========================================
-// CONFIGURAÇÃO DA API E CORES (MONDRIAN)
+// CONFIGURAÇÃO DA API E CORES (MONDRIAN ESTRITO)
 // ==========================================
 const getApiUrl = () => {
   try { return import.meta.env.VITE_APPS_SCRIPT_URL || ''; } 
@@ -10,21 +10,24 @@ const getApiUrl = () => {
 const API_URL = getApiUrl(); 
 
 const COLORS = {
-  crimson: '#C1272D', crimsonDark: '#8B1C20',
-  mustard: '#EAA221', mustardDark: '#B57C14',
-  teal: '#007D8A', tealDark: '#00555E',
-  black: '#111111', white: '#Fdfcf0', 
+  crimson: '#C1272D', 
+  mustard: '#EAA221', 
+  teal: '#007D8A', 
+  black: '#111111', 
+  white: '#Fdfcf0', 
+  pureWhite: '#ffffff'
 };
-const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal, COLORS.crimsonDark, COLORS.mustardDark, COLORS.tealDark];
+const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal];
 
 const MOCK_DATA = [
   { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'Plenário Osni Régis', 'Classe de Atividade': 'Sessão Legislativa', 'Região': 'Centro', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
   { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Sede do Campeche', 'Classe de Atividade': 'Comunidade', 'Região': 'Sul da Ilha', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
   { id: 4, 'Título': 'Visita Feira', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 165600000).toISOString(), 'Descrição': 'Apoio local.', 'Duração': 120, 'Local': 'Praça Central', 'Classe de Atividade': 'Visita Técnica', 'Região': 'Oeste', 'Município': 'Chapecó', 'Articulador': 'Pedro Alves', 'STATUS': 'Realizado' },
   { id: 5, 'Título': 'Encontro Lages', 'Início': new Date(Date.now() + 3600000).toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Frio.', 'Duração': 120, 'Local': 'Sindicato', 'Classe de Atividade': 'Reunião', 'Região': 'Serra', 'Município': 'Lages', 'Articulador': 'Marquito', 'STATUS': 'Confirmado' },
+  { id: 6, 'Título': 'Reunião Continente', 'Início': new Date(Date.now() + 9600000).toISOString(), 'Fim': new Date(Date.now() + 17200000).toISOString(), 'Descrição': 'Bairro.', 'Duração': 120, 'Local': 'Associação', 'Classe de Atividade': 'Comunidade', 'Região': 'Continente', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Pendente' },
 ];
 
-// Dicionário de Coordenadas para posicionamento no Mapa (Lat, Lng)
+// Dicionário de Coordenadas
 const SC_COORDS = {
   'florianopolis': [-27.5954, -48.5480], 'sao jose': [-27.6136, -48.6275], 'palhoca': [-27.6444, -48.6672],
   'joinville': [-26.3045, -48.8487], 'blumenau': [-26.9194, -49.0661], 'itajai': [-26.9078, -48.6619],
@@ -32,15 +35,16 @@ const SC_COORDS = {
   'tubarao': [-28.4709, -49.0045], 'balneario camboriu': [-26.9905, -48.6347], 'joacaba': [-27.1751, -51.5034],
   'biguacu': [-27.4952, -48.6558], 'concordia': [-27.2312, -52.0255], 'rio do sul': [-27.2144, -49.6433],
   'jaragua do sul': [-26.4842, -49.0706], 'brusque': [-27.0984, -48.9103], 'cacador': [-26.7750, -51.0130],
-  // Regiões Gerais fallback
-  'oeste': [-26.7322, -52.8879], 'meio-oeste': [-27.1648, -51.2721], 'planalto': [-27.8106, -50.3262],
-  'norte': [-26.3045, -48.8487], 'vale': [-26.9194, -49.0661], 'sul': [-28.6773, -49.3704], 'serra': [-27.8106, -50.3262]
+  'oeste': [-27.1004, -52.6152], 'serra': [-27.8106, -50.3262], 'norte': [-26.3045, -48.8487], 'sul': [-28.6773, -49.3704], 'vale': [-26.9194, -49.0661]
 };
 
 const FLORIPA_COORDS = {
-  'centro': [-27.5954, -48.5480], 'norte da ilha': [-27.4355, -48.4516], 
-  'sul da ilha': [-27.7247, -48.5135], 'leste da ilha': [-27.6041, -48.4613], 
-  'continente': [-27.5843, -48.5786], 'bacia do itacorubi': [-27.5845, -48.5100],
+  'centro': [-27.5954, -48.5480], 
+  'norte': [-27.4355, -48.4516], 
+  'sul': [-27.7247, -48.5135], 
+  'leste': [-27.6041, -48.4613], 
+  'continente': [-27.5843, -48.5786], 
+  'itacorubi': [-27.5845, -48.5100],
 };
 
 const formatDate = (dateString) => {
@@ -61,8 +65,6 @@ const normalizeData = (data) => {
     const newItem = { id: item.id };
     const keys = Object.keys(item);
     keys.forEach(k => { newItem[k] = item[k]; });
-    
-    // Mapeamento inteligente para evitar falhas por letras minúsculas ou espaços
     keys.forEach(k => {
       if (k === 'id') return;
       const normK = normalizerFilter(k);
@@ -88,20 +90,17 @@ const normalizeData = (data) => {
   });
 };
 
-// ==========================================
-// COMPONENTES GRÁFICOS
-// ==========================================
 const SimpleBarChart = ({ data, title }) => {
   const maxVal = Math.max(...data.map(d => d.value), 1);
   return (
-    <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full">
+    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full min-h-[300px]">
       <h3 className="text-[12px] font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2">{title}</h3>
       <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-[300px]">
-        {data.length === 0 && <div className="text-[10px] font-black text-gray-400 uppercase text-center py-4">Sem dados válidos</div>}
+        {data.length === 0 && <div className="text-[10px] font-black text-[#111111] opacity-50 uppercase text-center py-4">Sem dados válidos</div>}
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
             <span className="text-[10px] font-black text-[#111111] w-32 uppercase truncate" title={item.name}>{item.name}</span>
-            <div className="flex-1 h-5 bg-white border-[2px] border-[#111111] overflow-hidden relative">
+            <div className="flex-1 h-5 bg-[#Fdfcf0] border-[2px] border-[#111111] overflow-hidden relative">
               <div className="h-full border-r-[2px] border-[#111111] transition-all duration-500" style={{ width: `${(item.value / maxVal) * 100}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}></div>
             </div>
             <span className="text-xs font-black text-[#111111] w-8 text-right">{item.value}</span>
@@ -118,10 +117,10 @@ const SimplePieChart = ({ data, title }) => {
   const getCoordinatesForPercent = (percent) => [Math.cos(2 * Math.PI * percent), Math.sin(2 * Math.PI * percent)];
 
   return (
-    <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center h-full">
+    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center h-full min-h-[300px]">
       <h3 className="text-[12px] font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
       {data.length === 0 ? (
-         <div className="flex-1 flex items-center justify-center text-[10px] font-black text-gray-400 uppercase py-10">Sem dados válidos</div>
+         <div className="flex-1 flex items-center justify-center text-[10px] font-black text-[#111111] opacity-50 uppercase py-10">Sem dados válidos</div>
       ) : (
         <>
           <div className="relative w-32 h-32 flex-shrink-0">
@@ -142,9 +141,9 @@ const SimplePieChart = ({ data, title }) => {
               })}
             </svg>
           </div>
-          <div className="mt-6 w-full flex flex-wrap gap-2 justify-center overflow-y-auto max-h-[100px] custom-scrollbar">
+          <div className="mt-6 w-full flex flex-wrap gap-2 justify-center overflow-y-auto max-h-[120px] custom-scrollbar">
             {data.map((item, i) => (
-              <div key={i} className="flex items-center gap-1.5 text-[9px] font-black text-[#111111] bg-white border-[2px] border-[#111111] px-1.5 py-0.5 shadow-[2px_2px_0px_0px_#111111] uppercase">
+              <div key={i} className="flex items-center gap-1.5 text-[9px] font-black text-[#111111] bg-[#Fdfcf0] border-[2px] border-[#111111] px-1.5 py-0.5 shadow-[2px_2px_0px_0px_#111111] uppercase">
                 <span className="w-2.5 h-2.5 border-[2px] border-[#111111] block" style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}></span>
                 {item.name} ({(item.value / total * 100).toFixed(0)}%)
               </div>
@@ -156,7 +155,6 @@ const SimplePieChart = ({ data, title }) => {
   );
 };
 
-// Injeção Dinâmica do Leaflet para garantir funcionamento limpo no Vercel/Stackblitz sem erros de npm
 const GeographicMap = ({ data, title, isFloripa }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -169,17 +167,17 @@ const GeographicMap = ({ data, title, isFloripa }) => {
 
       if (!mapInstanceRef.current) {
         const mapCenter = isFloripa ? [-27.5954, -48.5480] : [-27.2730, -50.4906];
-        const mapZoom = isFloripa ? 11 : 6;
+        const mapZoom = isFloripa ? 10 : 6; // Ajuste de zoom para mostrar tudo
         
         mapInstanceRef.current = window.L.map(mapRef.current, { scrollWheelZoom: false }).setView(mapCenter, mapZoom);
         
-        // Estilo Positron - Limpo, claro, estético e estilo Google/Mondrian
+        // Estilo limpo do mapa base
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; OpenStreetMap'
         }).addTo(mapInstanceRef.current);
       }
 
-      // Limpar marcadores existentes em caso de re-render (filtros novos)
+      // Limpa camadas velhas (em caso de refiltro)
       mapInstanceRef.current.eachLayer((layer) => {
         if (layer instanceof window.L.CircleMarker) {
           mapInstanceRef.current.removeLayer(layer);
@@ -191,19 +189,26 @@ const GeographicMap = ({ data, title, isFloripa }) => {
 
       data.forEach(item => {
         const locationNorm = normalizerFilter(item.name);
-        const coords = coordsDict[locationNorm];
+        
+        // Lógica inteligente: Procura correspondência parcial (ex: "Florianópolis (Sul)" -> acha "sul")
+        let coords = coordsDict[locationNorm];
+        if (!coords) {
+          const foundKey = Object.keys(coordsDict).find(k => locationNorm.includes(k));
+          if (foundKey) coords = coordsDict[foundKey];
+        }
+
         if (coords) {
-          const radius = 10 + ((item.value / maxVal) * 20);
+          const radius = 12 + ((item.value / maxVal) * 25);
           const marker = window.L.circleMarker(coords, {
             radius: radius,
             fillColor: "#C1272D",
             color: "#111111",
-            weight: 2,
-            fillOpacity: 0.8
+            weight: 3,
+            fillOpacity: 0.9
           }).addTo(mapInstanceRef.current);
           
           marker.bindTooltip(`
-            <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px;">
+            <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
               ${item.name}: ${item.value}
             </div>
           `, { direction: 'top', className: 'custom-leaflet-tooltip' });
@@ -211,7 +216,7 @@ const GeographicMap = ({ data, title, isFloripa }) => {
       });
     };
 
-    // Injeta scripts dinamicamente apenas se não existirem
+    // Injeção limpa da biblioteca sem precisar de NPM install
     if (!window.L) {
       const css = document.createElement('link');
       css.rel = 'stylesheet';
@@ -236,13 +241,13 @@ const GeographicMap = ({ data, title, isFloripa }) => {
   }, [data, isFloripa]);
 
   return (
-    <div className="bg-[#Fdfcf0] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full relative z-0">
+    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full relative col-span-1 md:col-span-full">
       <h3 className="text-[12px] font-black text-[#111111] mb-2 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2">{title}</h3>
-      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4">Intensidade geográfica</p>
+      <p className="text-[9px] font-black text-[#111111] opacity-60 uppercase tracking-widest mb-4">Intensidade geográfica</p>
       
-      <div className="w-full h-64 border-[3px] border-[#111111] relative z-0 bg-white">
+      <div className="w-full h-96 border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
         {data.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-gray-400 uppercase z-10 bg-white">Sem agendas na região</div>
+          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#111111] opacity-50 uppercase z-10 bg-[#Fdfcf0]">Sem agendas na região</div>
         ) : (
           <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 0 }}></div>
         )}
@@ -251,15 +256,12 @@ const GeographicMap = ({ data, title, isFloripa }) => {
   );
 };
 
-// ==========================================
-// APLICATIVO PRINCIPAL
-// ==========================================
 export default function App() {
-  const [activeTab, setActiveTab] = useState('list'); // Agendas como tela inicial exigida
+  const [activeTab, setActiveTab] = useState('list');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // FILTROS GLOBAIS - Agora afetam tanto a lista quanto o Dashboard
+  // FILTROS GLOBAIS
   const [search, setSearch] = useState('');
   const [timeFilter, setTimeFilter] = useState('all');
   const [municipioFilter, setMunicipioFilter] = useState('all');
@@ -302,7 +304,6 @@ export default function App() {
     };
   }, [events]);
 
-  // Base de eventos filtrados para TODAS as telas (List e Dashboard)
   const filteredEvents = useMemo(() => {
     return events.filter(ev => {
       if (timeFilter === 'future' && !isFuture(ev['Início'])) return false;
@@ -321,21 +322,19 @@ export default function App() {
   }, [events, search, timeFilter, municipioFilter, regiaoFilter, articuladorFilter, classeFilter]);
 
   const dashboardStats = useMemo(() => {
-    // Agregador universal que bloqueia os termos indesejados estritamente
     const agg = (key) => {
       const counts = {};
       filteredEvents.forEach(ev => {
         let val = ev[key];
         if (!val || val.toString().trim() === '') return;
         const norm = normalizerFilter(val);
-        // Regra Estrita: Bloqueia "Outros Eventos" e "Não definido"
+        // Regra Estrita: Bloqueia lixo e "Outros Eventos"
         if (norm === 'outros eventos' || norm === 'nao definido') return;
         counts[val] = (counts[val] || 0) + 1;
       });
       return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     };
 
-    // Estatísticas Temporais
     let pastCount = 0; let futureCount = 0;
     filteredEvents.forEach(ev => isPast(ev['Início']) ? pastCount++ : futureCount++);
     const temporalStats = [
@@ -343,14 +342,11 @@ export default function App() {
       { name: 'Futuras', value: futureCount }
     ].filter(s => s.value > 0);
 
-    // Mapa de SC lê estritamente a coluna I (Município)
-    const scHeatmap = agg('Município');
-    
-    // Mapa de Floripa lê a coluna H (Região) SOMENTE onde o Município é Floripa
+    const scHeatmap = agg('Município'); // I
     const floripaHeatmapMap = {};
     filteredEvents.forEach(ev => {
       if (normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa')) {
-        const reg = ev['Região'];
+        const reg = ev['Região']; // H
         if (reg && normalizerFilter(reg) !== 'nao definido') {
           floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
         }
@@ -360,42 +356,42 @@ export default function App() {
 
     return { 
       classes: agg('Classe de Atividade'), 
-      articuladores: agg('Articulador'), // Coluna H 
+      articuladores: agg('Articulador'), 
       temporalStats, 
-      scHeatmap, // Coluna I
-      floripaHeatmap // Coluna H quando Floripa
+      scHeatmap, 
+      floripaHeatmap 
     };
   }, [filteredEvents]);
 
   const renderGlobalFilters = () => (
-    <div className="bg-[#Fdfcf0] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 animate-fade-in relative z-10">
+    <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         <input 
           type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
-          className="flex-1 px-4 py-2 bg-white border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111]"
+          className="flex-1 px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
           value={search} onChange={(e) => setSearch(e.target.value)}
         />
         <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] self-start md:self-auto flex-wrap">
-          <button onClick={() => setTimeFilter('all')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'all' ? 'bg-white text-[#111111]' : 'text-white hover:bg-gray-800'}`}>Tudo</button>
-          <button onClick={() => setTimeFilter('future')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'future' ? 'bg-white text-[#111111]' : 'text-white hover:bg-gray-800'}`}>Futuras</button>
-          <button onClick={() => setTimeFilter('past')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'past' ? 'bg-white text-[#111111]' : 'text-white hover:bg-gray-800'}`}>Realizadas</button>
+          <button onClick={() => setTimeFilter('all')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'all' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Tudo</button>
+          <button onClick={() => setTimeFilter('future')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'future' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Futuras</button>
+          <button onClick={() => setTimeFilter('past')} className={`px-3 py-1.5 text-[9px] font-black uppercase ${timeFilter === 'past' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Realizadas</button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <select value={municipioFilter} onChange={(e) => setMunicipioFilter(e.target.value)} className="bg-white border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
+        <select value={municipioFilter} onChange={(e) => setMunicipioFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
           <option value="all">TODOS MUNICÍPIOS (Col I)</option>
           {filterOptions.municipios.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <select value={regiaoFilter} onChange={(e) => setRegiaoFilter(e.target.value)} className="bg-white border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODAS AS REGIÕES</option>
+        <select value={regiaoFilter} onChange={(e) => setRegiaoFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
+          <option value="all">TODAS REGIÕES (Col H)</option>
           {filterOptions.regioes.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <select value={articuladorFilter} onChange={(e) => setArticuladorFilter(e.target.value)} className="bg-white border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
-          <option value="all">TODOS ARTICULADORES (Col H)</option>
+        <select value={articuladorFilter} onChange={(e) => setArticuladorFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
+          <option value="all">TODOS ARTICULADORES</option>
           {filterOptions.articuladores.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <select value={classeFilter} onChange={(e) => setClasseFilter(e.target.value)} className="bg-white border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
+        <select value={classeFilter} onChange={(e) => setClasseFilter(e.target.value)} className="bg-[#Fdfcf0] text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2 py-2 focus:outline-none shadow-[4px_4px_0px_0px_#111111] truncate">
           <option value="all">TODAS CLASSES</option>
           {filterOptions.classes.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -404,22 +400,22 @@ export default function App() {
   );
 
   const renderDashboard = () => (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-center border-[4px] border-[#111111] bg-white p-4 shadow-[6px_6px_0px_0px_#111111]">
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-col md:flex-row justify-between items-center border-[4px] border-[#111111] bg-[#ffffff] p-4 shadow-[6px_6px_0px_0px_#111111]">
         <h2 className="text-xl font-black text-[#111111] tracking-tighter uppercase">Visão Geral (Filtrada)</h2>
-        <span className="text-[12px] font-black px-4 py-2 bg-[#111111] text-white border-[3px] border-[#111111] mt-2 md:mt-0">
-          AGENDA TOTAL NA TELA: {filteredEvents.length}
+        <span className="text-[12px] font-black px-4 py-2 bg-[#111111] text-[#Fdfcf0] border-[3px] border-[#111111] mt-2 md:mt-0">
+          TOTAL EXIBIDO: {filteredEvents.length}
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores (Col H)" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Tempo: Futuras vs Passadas" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Atividades (Tempo)" /></div>
       </div>
 
-      {/* Mapas Geográficos Integrados */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      {/* Mapas 100% da Largura da Tela em Linhas Separadas para maior destaque */}
+      <div className="grid grid-cols-1 gap-8 mt-8">
         <GeographicMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina (Col I)" isFloripa={false} />
         <GeographicMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis (Col H)" isFloripa={true} />
       </div>
@@ -427,51 +423,56 @@ export default function App() {
   );
 
   const renderList = () => (
-    <div className="space-y-6 animate-fade-in pb-10 relative z-0">
+    <div className="space-y-6 pb-10 relative z-0">
       <div className="flex justify-end">
         <div className="flex bg-[#111111] p-1 border-[3px] border-[#111111]">
-          <button onClick={() => setViewMode('cards')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors ${viewMode === 'cards' ? 'bg-white text-[#111111]' : 'text-white hover:bg-gray-800'}`}>Cards</button>
-          <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors ${viewMode === 'table' ? 'bg-white text-[#111111]' : 'text-white hover:bg-gray-800'}`}>Lista</button>
+          <button onClick={() => setViewMode('cards')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors ${viewMode === 'cards' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Cards</button>
+          <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors ${viewMode === 'table' ? 'bg-[#Fdfcf0] text-[#111111]' : 'text-[#Fdfcf0] hover:bg-[#333333]'}`}>Lista</button>
         </div>
       </div>
 
       {filteredEvents.length === 0 ? (
-        <div className="text-center py-16 font-black text-xl text-gray-400 bg-white border-[4px] border-[#111111] border-dashed">NENHUM RESULTADO NESTES FILTROS</div>
+        <div className="text-center py-16 font-black text-xl text-[#111111] opacity-50 bg-[#ffffff] border-[4px] border-[#111111] border-dashed">NENHUM RESULTADO</div>
       ) : (
         <>
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredEvents.map((ev, i) => (
-                <div key={i} onClick={() => setSelectedEvent(ev)} className="bg-white p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] hover:shadow-[10px_10px_0px_0px_#111111] hover:-translate-y-1 transition-all cursor-pointer flex flex-col h-full relative">
-                  <div className="absolute top-0 right-0 w-8 h-8 border-l-[4px] border-b-[4px] border-[#111111]" style={{ backgroundColor: isFuture(ev['Início']) ? COLORS.teal : '#d1d5db' }}></div>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-white bg-[#111111] px-2 py-1 border-[2px] border-[#111111] self-start mb-3">{ev['Classe de Atividade'] || 'S/ CLASSE'}</span>
+                <div key={i} onClick={() => setSelectedEvent(ev)} className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] hover:shadow-[10px_10px_0px_0px_#111111] hover:-translate-y-1 transition-all cursor-pointer flex flex-col h-full relative">
+                  <div className="absolute top-0 right-0 w-8 h-8 border-l-[4px] border-b-[4px] border-[#111111]" style={{ backgroundColor: isFuture(ev['Início']) ? COLORS.teal : '#cccccc' }}></div>
+                  
+                  <span className="text-[9px] font-black uppercase tracking-wider text-[#Fdfcf0] bg-[#111111] px-2 py-1 border-[2px] border-[#111111] self-start mb-3">
+                    {ev['Classe de Atividade'] || 'S/ CLASSE'}
+                  </span>
+                  
                   <h3 className="font-black text-lg text-[#111111] leading-tight mb-4 uppercase line-clamp-3">{ev['Título']}</h3>
                   
+                  {/* Substituição de SVGs por Emojis para garantir alinhamento limpo */}
                   <div className="mt-auto space-y-2 border-t-[3px] border-[#111111] pt-3">
-                    <p className="text-[10px] font-black text-gray-600 uppercase">📅 {formatDate(ev['Início'])}</p>
-                    <p className="text-[10px] font-black text-[#C1272D] uppercase truncate">📍 {ev['Município']} {ev['Região'] ? `- ${ev['Região']}` : ''}</p>
-                    <p className="text-[10px] font-black text-[#EAA221] uppercase truncate">👤 {ev['Articulador']}</p>
+                    <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-1.5"><span className="text-lg leading-none">📅</span> {formatDate(ev['Início'])}</p>
+                    <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-1.5"><span className="text-lg leading-none">📍</span> {ev['Município']} {ev['Região'] ? `- ${ev['Região']}` : ''}</p>
+                    <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-1.5"><span className="text-lg leading-none">👤</span> {ev['Articulador']}</p>
                   </div>
-                  <div className="absolute bottom-3 right-3 border-[2px] border-[#111111] px-1.5 py-0.5 text-[9px] font-black uppercase bg-white">{ev['STATUS'] || 'Pendente'}</div>
+                  <div className="absolute bottom-3 right-3 border-[2px] border-[#111111] px-1.5 py-0.5 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="bg-white border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] overflow-x-auto">
+            <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="text-[10px] text-white uppercase bg-[#111111]">
+                <thead className="text-[10px] text-[#Fdfcf0] uppercase bg-[#111111]">
                   <tr>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-white">Título</th>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-white">Data</th>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-white">Mun./Região</th>
-                    <th className="px-4 py-3 font-black border-b-[3px] border-white">Articulador</th>
+                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Título</th>
+                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Data</th>
+                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Mun./Região</th>
+                    <th className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Articulador</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEvents.map((ev, i) => (
                     <tr key={i} onClick={() => setSelectedEvent(ev)} className="border-b-[3px] border-[#111111] hover:bg-[#Fdfcf0] cursor-pointer">
-                      <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate">{ev['Título']}</td>
-                      <td className="px-4 py-3 text-[10px] font-bold">{formatDate(ev['Início'])}</td>
+                      <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate text-[#111111]">{ev['Título']}</td>
+                      <td className="px-4 py-3 text-[10px] font-bold text-[#111111]">{formatDate(ev['Início'])}</td>
                       <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[150px]">{ev['Município']}/{ev['Região']}</td>
                       <td className="px-4 py-3 text-[10px] font-bold text-[#EAA221]">{ev['Articulador']}</td>
                     </tr>
@@ -487,28 +488,42 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#Fdfcf0] font-sans text-[#111111] flex flex-col md:flex-row selection:bg-[#EAA221] selection:text-[#111111]">
-      <nav className="bg-[#111111] text-white w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
-        <div className="p-6 border-b-[4px] border-white bg-[#C1272D]">
-          <h1 className="text-3xl font-black tracking-tighter text-white border-b-[4px] border-white pb-2 inline-block">TABULUM</h1>
-          <p className="text-[9px] text-white font-black uppercase tracking-widest mt-2 bg-[#111111] px-2 py-1 inline-block border-[2px] border-white">GesTaAg • Marquito</p>
+      <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
+        <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D]">
+          <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] border-b-[4px] border-[#Fdfcf0] pb-2 inline-block">TABULUM</h1>
+          <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-2 bg-[#111111] px-2 py-1 inline-block border-[2px] border-[#Fdfcf0]">GesTaAg • Marquito</p>
         </div>
         
         <div className="flex flex-row md:flex-col p-4 gap-4 overflow-x-auto">
-          {/* Botão de Agendas - Primeiro de cima e default */}
-          <button onClick={() => setActiveTab('list')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-white text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111] shadow-[4px_4px_0px_0px_#EAA221]' : 'bg-[#111111] hover:bg-white hover:text-[#111111]'}`}>
-            <span className="w-2.5 h-2.5 bg-white border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : 'white'}}></span>AGENDAS
+          <button onClick={() => setActiveTab('list')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111] shadow-[4px_4px_0px_0px_#EAA221]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}>
+            <span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : '#Fdfcf0'}}></span>AGENDAS
           </button>
-          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-white text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'dashboard' ? 'bg-[#007D8A] text-white border-[#111111] shadow-[4px_4px_0px_0px_#007D8A]' : 'bg-[#111111] hover:bg-white hover:text-[#111111]'}`}>
-            <span className="w-2.5 h-2.5 bg-white border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='dashboard' ? '#111111' : 'white'}}></span>DASHBOARD
+          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'dashboard' ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#111111] shadow-[4px_4px_0px_0px_#007D8A]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}>
+            <span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='dashboard' ? '#111111' : '#Fdfcf0'}}></span>DASHBOARD
           </button>
+        </div>
+
+        {/* MENSAGEM ORIGINAL DA PLANILHA RESTAURADA E ESTILIZADA */}
+        <div className="mt-auto hidden md:block p-6">
+          <div className="bg-[#Fdfcf0] border-[4px] border-[#111111] p-4 shadow-[4px_4px_0px_0px_#111111]">
+            <p className="text-[9px] text-[#111111] font-black uppercase leading-relaxed mb-2 border-b-[2px] border-[#111111] pb-2">Conexão Sheets</p>
+            <div className="flex items-center gap-2">
+              <span className={`w-3 h-3 border-[2px] border-[#111111] block ${API_URL ? 'bg-[#007D8A]' : 'bg-[#EAA221]'}`}></span>
+              <span className="text-[9px] text-[#111111] font-black uppercase">{API_URL ? 'Online / Sincronizado' : 'Modo Demonstração'}</span>
+            </div>
+          </div>
         </div>
       </nav>
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative z-0">
         {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#Fdfcf0] z-10 font-black uppercase tracking-widest">Carregando Dados...</div>
+          // CARREGAMENTO ORIGINAL QUADRADO MONDRIAN RESTAURADO
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#Fdfcf0] z-10 gap-6">
+            <div className="w-16 h-16 bg-[#EAA221] border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] animate-spin"></div>
+            <div className="font-black uppercase tracking-widest text-[#111111] text-lg bg-[#ffffff] px-4 py-2 border-[4px] border-[#111111]">Carregando Dados...</div>
+          </div>
         ) : (
-          <div className="max-w-7xl mx-auto h-full">
+          <div className="max-w-7xl mx-auto h-full animate-fade-in">
             {renderGlobalFilters()}
             {activeTab === 'list' && renderList()}
             {activeTab === 'dashboard' && renderDashboard()}
@@ -520,20 +535,20 @@ export default function App() {
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex justify-end animate-fade-in">
           <div className="bg-[#Fdfcf0] w-full max-w-lg h-full border-l-[6px] border-[#111111] flex flex-col overflow-y-auto shadow-[-10px_0px_0px_0px_rgba(0,0,0,0.3)]">
-            <div className="p-6 bg-white border-b-[4px] border-[#111111] sticky top-0 z-10 flex justify-between items-start">
+            <div className="p-6 bg-[#ffffff] border-b-[4px] border-[#111111] sticky top-0 z-10 flex justify-between items-start">
               <div>
-                <span className="bg-[#111111] text-white text-[9px] font-black uppercase px-2 py-1 border-[2px] border-[#111111]">{selectedEvent['Classe de Atividade']}</span>
+                <span className="bg-[#111111] text-[#Fdfcf0] text-[9px] font-black uppercase px-2 py-1 border-[2px] border-[#111111]">{selectedEvent['Classe de Atividade']}</span>
                 <h2 className="text-xl font-black text-[#111111] leading-tight uppercase mt-3">{selectedEvent['Título']}</h2>
               </div>
-              <button onClick={() => setSelectedEvent(null)} className="p-2 bg-[#C1272D] text-white border-[3px] border-[#111111] hover:bg-[#8B1C20] shadow-[3px_3px_0px_0px_#111111]">X</button>
+              <button onClick={() => setSelectedEvent(null)} className="p-2 bg-[#C1272D] text-[#Fdfcf0] border-[3px] border-[#111111] hover:bg-[#8B1C20] shadow-[3px_3px_0px_0px_#111111]">X</button>
             </div>
             
             <div className="p-6 space-y-6">
-              <select value={selectedEvent['STATUS'] || 'Pendente'} onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} className="w-full bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none">
+              <select value={selectedEvent['STATUS'] || 'Pendente'} onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} className="w-full bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-[#111111] text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none">
                 <option value="Pendente">Pendente</option><option value="Confirmado">Confirmado</option><option value="Realizado">Realizado</option>
               </select>
 
-              <div className="bg-white p-5 border-[4px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] space-y-4">
+              <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] space-y-4 text-[#111111]">
                 <div><label className="text-[9px] uppercase font-black text-[#007D8A] block">Município / Região</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Município']} / {selectedEvent['Região']}</p></div>
                 <div><label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
@@ -554,8 +569,7 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-track { background: #Fdfcf0; border-left: 2px solid #111111; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #111111; }
         
-        /* Ajustes no CSS Injetado do Leaflet para design Mondrian */
-        .leaflet-container { background: #Fdfcf0 !important; font-family: inherit !important; }
+        .leaflet-container { background: #Fdfcf0 !important; font-family: inherit !important; z-index: 0 !important;}
         .custom-leaflet-tooltip { 
            border: 3px solid #111111 !important; 
            border-radius: 0 !important; 
