@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 
+// ==========================================
+// CONFIGURAÇÃO DA API E CORES (MONDRIAN ESTRITO)
+// ==========================================
 const getApiUrl = () => {
   try { return import.meta.env.VITE_APPS_SCRIPT_URL || ''; } 
   catch (e) { return ''; }
@@ -16,6 +19,9 @@ const COLORS = {
 };
 const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal];
 
+// ==========================================
+// POLÍGONOS CARTOGRÁFICOS E DICIONÁRIOS
+// ==========================================
 const FLORIPA_POLYGONS = {
   'Norte da Ilha': [[-27.39, -48.41], [-27.41, -48.37], [-27.44, -48.38], [-27.48, -48.40], [-27.49, -48.45], [-27.48, -48.50], [-27.45, -48.53], [-27.42, -48.50]],
   'Leste da Ilha': [[-27.48, -48.40], [-27.53, -48.42], [-27.57, -48.43], [-27.62, -48.48], [-27.60, -48.50], [-27.55, -48.47], [-27.49, -48.45]],
@@ -25,7 +31,7 @@ const FLORIPA_POLYGONS = {
 };
 
 const MOCK_DATA = [
-  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date(Date.now() + 7200000).toISOString(), 'Fim': new Date(Date.now() + 14400000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
+  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
   { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Campeche, Florianópolis', 'Classe de Atividade': 'Comunidade', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
   { id: 4, 'Título': 'Aniversário Filho', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Privado.', 'Duração': 120, 'Local': 'Casa', 'Classe de Atividade': 'Pessoal (Família)', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Confirmado' },
 ];
@@ -44,11 +50,11 @@ const normalizerFilter = (str) => {
 
 const toProperCase = (str) => {
   if (!str || typeof str !== 'string') return str;
-  // Expressão regular aprimorada para lidar com acentos em português (Resolve FlorianóPolis)
-  return str.trim().toLowerCase().replace(/(?:^|[\s(/-])[a-zà-ÿ]/gi, c => c.toUpperCase());
+  return str.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 };
 
 const FLORIPA_GEO = [
+  { k: 'centro', b: 'Centro', d: 'Sede', r: 'Centro' },
   { k: 'alesc', b: 'Centro', d: 'Sede', r: 'Centro' },
   { k: 'osni regis', b: 'Centro', d: 'Sede', r: 'Centro' },
   { k: 'alfandega', b: 'Centro', d: 'Sede', r: 'Centro' },
@@ -104,13 +110,8 @@ const FLORIPA_GEO = [
   { k: 'carianos', b: 'Carianos', d: 'Sede', r: 'Sul da Ilha' },
   { k: 'caieira', b: 'Caieira', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
   { k: 'solidao', b: 'Solidão', d: 'Pântano do Sul', r: 'Sul da Ilha' },
-  { k: 'naufragados', b: 'Naufragados', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
-  { k: 'centro', b: 'Centro', d: 'Sede', r: 'Centro' }
+  { k: 'naufragados', b: 'Naufragados', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' }
 ];
-
-const getFloripaRegion = (evento) => {
-  return evento['Região Floripa'] || 'Centro';
-};
 
 const enrichFloripaLocation = (evento) => {
   const textToSearch = [evento['Local'] || '', evento['Título'] || '', evento['Descrição'] || ''].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -165,6 +166,9 @@ const normalizeData = (data) => {
   });
 };
 
+// ==========================================
+// COMPONENTES MULTI-SELECT MONDRIAN
+// ==========================================
 const MultiSelect = ({ options, selected, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -221,6 +225,9 @@ const MultiSelect = ({ options, selected, onChange, placeholder }) => {
   );
 };
 
+// ==========================================
+// COMPONENTES GRÁFICOS
+// ==========================================
 const SimpleBarChart = ({ data, title }) => {
   const maxVal = Math.max(...data.map(d => d.value), 1);
   return (
@@ -564,6 +571,22 @@ export default function App() {
     return { classes: agg('Classe de Atividade'), articuladores: agg('Articulador'), temporalStats, scHeatmap, floripaHeatmap };
   }, [filteredEvents]);
 
+  const summaryStats = useMemo(() => {
+    let total = filteredEvents.length;
+    let capital = 0;
+    let futuras = 0;
+    let pendentes = 0;
+
+    filteredEvents.forEach(ev => {
+      const mun = normalizerFilter(ev['Município']);
+      if (mun.includes('florianopolis') || mun.includes('floripa')) capital++;
+      if (isFuture(ev['Início'])) futuras++;
+      if (ev['STATUS'] === 'Pendente') pendentes++;
+    });
+
+    return { total, capital, interior: total - capital, futuras, pendentes };
+  }, [filteredEvents]);
+
   const renderGlobalFilters = () => (
     <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10 w-full">
       <div className="flex flex-col md:flex-row gap-4 mb-2">
@@ -699,7 +722,30 @@ export default function App() {
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
         <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D]">
           <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] border-b-[4px] border-[#Fdfcf0] pb-2 inline-block">TABULUM</h1>
-          <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-2 bg-[#111111] px-2 py-1 inline-block border-[2px] border-[#Fdfcf0]">GesTaAg • Marquito</p>
+          <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-2 bg-[#111111] px-2 py-1 inline-block border-[2px] border-[#Fdfcf0]">GESTÃO DE AGENDAS</p>
+          
+          <div className="mt-6 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2">
+            <div className="flex justify-between items-end">
+              <span className="text-[9px] font-black uppercase tracking-wider">Agendas Visíveis</span>
+              <span className="text-xl font-black text-[#C1272D] leading-none">{summaryStats.total}</span>
+            </div>
+            
+            <div className="mt-1">
+              <div className="flex justify-between text-[8px] font-black uppercase mb-1">
+                <span className="text-[#007D8A]">Capital: {summaryStats.capital}</span>
+                <span className="text-[#EAA221]">Estado: {summaryStats.interior}</span>
+              </div>
+              <div className="h-2 w-full flex border-[2px] border-[#111111]">
+                <div className="h-full bg-[#007D8A] transition-all duration-500" style={{ width: `${summaryStats.total === 0 ? 0 : (summaryStats.capital / summaryStats.total) * 100}%` }}></div>
+                <div className="h-full bg-[#EAA221] transition-all duration-500" style={{ width: `${summaryStats.total === 0 ? 0 : (summaryStats.interior / summaryStats.total) * 100}%` }}></div>
+              </div>
+            </div>
+
+            <div className="pt-2 mt-1 border-t-[2px] border-dashed border-[#111111] flex justify-between text-[8px] font-black uppercase">
+              <span>Futuras: <span className="text-[#007D8A] ml-1">{summaryStats.futuras}</span></span>
+              <span>Pendentes: <span className="text-[#C1272D] ml-1">{summaryStats.pendentes}</span></span>
+            </div>
+          </div>
         </div>
         <div className="flex flex-row md:flex-col p-4 gap-4 overflow-x-auto">
           <button onClick={() => setActiveTab('list')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111] shadow-[4px_4px_0px_0px_#EAA221]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}><span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : '#Fdfcf0'}}></span>AGENDAS</button>
