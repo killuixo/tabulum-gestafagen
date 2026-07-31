@@ -31,9 +31,9 @@ const FLORIPA_POLYGONS = {
 };
 
 const MOCK_DATA = [
-  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado', 'Importância': 'Alta' },
-  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Campeche, Florianópolis', 'Classe de Atividade': 'Comunidade', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente', 'Importância': 'Média' },
-  { id: 4, 'Título': 'Aniversário Filho', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 162800000).toISOString(), 'Descrição': 'Privado.', 'Duração': 120, 'Local': 'Casa', 'Classe de Atividade': 'Pessoal (Família)', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Realizado', 'Importância': 'Baixa' },
+  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado', 'Prioridade': 'Alta' },
+  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Campeche, Florianópolis', 'Classe de Atividade': 'Comunidade', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente', 'Prioridade': 'Média' },
+  { id: 4, 'Título': 'Aniversário Filho', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 162800000).toISOString(), 'Descrição': 'Privado.', 'Duração': 120, 'Local': 'Casa', 'Classe de Atividade': 'Pessoal (Família)', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Realizado', 'Prioridade': 'Baixa' },
 ];
 
 const formatDate = (dateString) => {
@@ -140,19 +140,28 @@ const normalizeData = (data) => {
       if (normK.includes('duracao')) newItem['Duração'] = item[k];
       if (normK.includes('local')) newItem['Local'] = item[k];
       
+      // Correção e formatação específica para a Classe de Atividade ("Plenária")
       if (normK === 'classe' || normK.includes('atividade')) {
         let v = item[k];
-        if (typeof v === 'string' && normalizerFilter(v).includes('plenaria')) {
-            v = 'Plenária';
+        if (typeof v === 'string') {
+            let properV = toProperCase(v);
+            // Corrige "Plenaria" sem acento para "Plenária" mantendo o restante do texto
+            properV = properV.replace(/Plenaria/gi, 'Plenária');
+            newItem['Classe de Atividade'] = properV;
+        } else {
+            newItem['Classe de Atividade'] = v;
         }
-        newItem['Classe de Atividade'] = toProperCase(v);
       }
       
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
       if (normK.includes('articulador') || normK.includes('responsavel')) newItem['Articulador'] = toProperCase(item[k]);
       if (normK === 'status') newItem['STATUS'] = item[k];
-      if (normK.includes('import') || normK.includes('urgenc') || normK === 'nivel de importancia') newItem['Importância'] = toProperCase(item[k]);
+      
+      // Capturando os níveis de importância ou prioridade
+      if (normK.includes('import') || normK.includes('urgenc') || normK === 'nivel de importancia' || normK.includes('prioridade')) {
+        newItem['Prioridade'] = toProperCase(item[k]);
+      }
     });
 
     Object.keys(newItem).forEach(k => {
@@ -434,12 +443,12 @@ export default function App() {
   
   const [search, setSearch] = useState('');
   
-  // Novos filtros temporais padrão
+  // Filtros temporais
   const [showFuture, setShowFuture] = useState(true);
   const [showPast, setShowPast] = useState(false);
   const [showPessoal, setShowPessoal] = useState(false); 
   
-  // Novos filtros de escopo
+  // Filtros de escopo
   const [scopeCapital, setScopeCapital] = useState(true);
   const [scopeInterior, setScopeInterior] = useState(true);
   
@@ -480,6 +489,12 @@ export default function App() {
     setEvents(events.map(ev => ev.id === id ? { ...ev, 'STATUS': newStatus } : ev));
     if (selectedEvent && selectedEvent.id === id) setSelectedEvent({ ...selectedEvent, 'STATUS': newStatus });
     if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, status: newStatus }), redirect: "follow" }).catch(()=>{});
+  };
+
+  const handleUpdatePriority = async (id, newPriority) => {
+    setEvents(events.map(ev => ev.id === id ? { ...ev, 'Prioridade': newPriority } : ev));
+    if (selectedEvent && selectedEvent.id === id) setSelectedEvent({ ...selectedEvent, 'Prioridade': newPriority });
+    if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, prioridade: newPriority }), redirect: "follow" }).catch(()=>{});
   };
 
   const handleUpdateArticulador = async (id, val) => {
@@ -527,8 +542,8 @@ export default function App() {
       if (!showPessoal && isPessoal) return false;
 
       if (showOnlyImportant) {
-        const imp = normalizerFilter(ev['Importância'] || '');
-        if (!imp.includes('alta') && !imp.includes('urgente') && !imp.includes('importante') && imp !== '1') return false;
+        const imp = normalizerFilter(ev['Prioridade'] || ev['Importância'] || '');
+        if (!imp.includes('alta') && !imp.includes('urgente') && !imp.includes('importante') && !imp.includes('maxima') && imp !== '1') return false;
       }
 
       if (selectedMunicipios.length > 0 && !selectedMunicipios.includes(ev['Município'])) return false;
@@ -617,74 +632,80 @@ export default function App() {
   const upcomingImportantCount = useMemo(() => {
     return events.filter(ev => {
         if (!isFuture(ev['Início'])) return false;
-        const imp = normalizerFilter(ev['Importância'] || '');
-        return imp.includes('alta') || imp.includes('urgente') || imp.includes('importante') || imp === '1';
+        const imp = normalizerFilter(ev['Prioridade'] || ev['Importância'] || '');
+        return imp.includes('alta') || imp.includes('urgente') || imp.includes('importante') || imp.includes('maxima') || imp === '1';
     }).length;
   }, [events]);
 
-  const renderGlobalFilters = () => (
-    <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10 w-full">
-      <div className="flex flex-col gap-2 mb-2">
-         <div className="flex flex-col md:flex-row gap-4">
-            <button 
-              onClick={() => setScopeCapital(!scopeCapital)} 
-              className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeCapital ? 'bg-[#111111] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
-            >
-              <div className={`w-3 h-3 border-[2px] border-[#111111] ${scopeCapital ? 'bg-[#Fdfcf0]' : 'bg-[#111111]'}`}></div>
-              FLORIANÓPOLIS
-            </button>
-            <button 
-              onClick={() => setScopeInterior(!scopeInterior)} 
-              className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeInterior ? 'bg-[#111111] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
-            >
-              <div className={`w-3 h-3 border-[2px] border-[#111111] ${scopeInterior ? 'bg-[#Fdfcf0]' : 'bg-[#111111]'}`}></div>
-              SANTA CATARINA
-            </button>
-         </div>
-         <div className="text-[9px] font-black uppercase text-[#111111] text-center bg-[#Fdfcf0] py-1 border-[2px] border-[#111111] border-dashed">
-           Exibindo localidade: {scopeCapital && scopeInterior ? 'GERAL (CAPITAL E ESTADO)' : scopeCapital ? 'SOMENTE FLORIANÓPOLIS' : scopeInterior ? 'SOMENTE SANTA CATARINA' : 'NENHUMA REGIÃO SELECIONADA'}
-         </div>
-      </div>
+  const renderGlobalFilters = () => {
+    const isBothScopes = scopeCapital && scopeInterior;
 
-      <div className="flex flex-col xl:flex-row gap-4 justify-between">
-        <input 
-          type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
-          className="flex-1 px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
-          value={search} onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap">
-          <button 
-            onClick={() => setShowFuture(!showFuture)} 
-            className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showFuture ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
-          >
-             <div className={`w-2.5 h-2.5 border-[2px] border-[#Fdfcf0] flex-shrink-0 ${showFuture ? 'bg-[#Fdfcf0]' : 'bg-transparent'}`}></div>
-             FUTUROS
-          </button>
-          
-          <button 
-            onClick={() => setShowPast(!showPast)} 
-            className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPast ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
-          >
-             <div className={`w-2.5 h-2.5 border-[2px] border-[#111111] flex-shrink-0 ${showPast ? 'bg-[#111111]' : 'bg-[#Fdfcf0]'}`}></div>
-             PASSADOS
-          </button>
-          
-          <div className="w-px h-auto bg-[#333333] mx-1"></div>
-          
-          <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Alternar visibilidade de agendas pessoais">
-             <div className={`w-2.5 h-2.5 border-[2px] border-[#111111] flex-shrink-0 ${showPessoal ? 'bg-[#111111]' : 'bg-[#Fdfcf0]'}`}></div>
-             PESSOAL
-          </button>
+    return (
+      <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10 w-full">
+        <div className="flex flex-col xl:flex-row gap-4 mb-2 items-stretch">
+           <div className="flex flex-col md:flex-row gap-4 flex-1">
+              <button 
+                onClick={() => setScopeCapital(!scopeCapital)} 
+                className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeCapital ? (isBothScopes ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#EAA221] text-[#111111]') : 'bg-[#111111] text-[#Fdfcf0]'}`}
+              >
+                <div className={`w-3 h-3 border-[2px] ${scopeCapital ? (isBothScopes ? 'border-[#Fdfcf0] bg-[#Fdfcf0]' : 'border-[#111111] bg-[#111111]') : 'border-[#Fdfcf0] bg-transparent'}`}></div>
+                FLORIANÓPOLIS
+              </button>
+              <button 
+                onClick={() => setScopeInterior(!scopeInterior)} 
+                className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeInterior ? (isBothScopes ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#EAA221] text-[#111111]') : 'bg-[#111111] text-[#Fdfcf0]'}`}
+              >
+                <div className={`w-3 h-3 border-[2px] ${scopeInterior ? (isBothScopes ? 'border-[#Fdfcf0] bg-[#Fdfcf0]' : 'border-[#111111] bg-[#111111]') : 'border-[#Fdfcf0] bg-transparent'}`}></div>
+                SANTA CATARINA
+              </button>
+           </div>
+           <div className="flex items-center justify-center bg-[#Fdfcf0] border-[3px] border-[#111111] border-dashed px-4 py-2 flex-shrink-0 min-w-[250px]">
+             <span className="text-[10px] font-black uppercase text-[#C1272D] text-center">
+               Exibindo: {isBothScopes ? 'GERAL (CAPITAL E ESTADO)' : scopeCapital ? 'SOMENTE FLORIANÓPOLIS' : scopeInterior ? 'SOMENTE SANTA CATARINA' : 'NENHUMA REGIÃO SELECIONADA'}
+             </span>
+           </div>
+        </div>
+
+        <div className="flex flex-col xl:flex-row gap-4 justify-between">
+          <input 
+            type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
+            className="flex-1 px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
+            value={search} onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap">
+            <button 
+              onClick={() => setShowFuture(!showFuture)} 
+              className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showFuture ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
+            >
+               <div className={`w-2.5 h-2.5 border-[2px] border-[#Fdfcf0] flex-shrink-0 ${showFuture ? 'bg-[#Fdfcf0]' : 'bg-transparent'}`}></div>
+               FUTUROS
+            </button>
+            
+            <button 
+              onClick={() => setShowPast(!showPast)} 
+              className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPast ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
+            >
+               <div className={`w-2.5 h-2.5 border-[2px] ${showPast ? 'border-[#111111] bg-[#111111]' : 'border-[#Fdfcf0] bg-transparent'} flex-shrink-0`}></div>
+               PASSADOS
+            </button>
+            
+            <div className="w-px h-auto bg-[#333333] mx-1"></div>
+            
+            <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Alternar visibilidade de agendas pessoais">
+               <div className={`w-2.5 h-2.5 border-[2px] ${showPessoal ? 'border-[#111111] bg-[#111111]' : 'border-[#Fdfcf0] bg-transparent'} flex-shrink-0`}></div>
+               PESSOAL
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+          <MultiSelect options={filterOptions.municipios} selected={selectedMunicipios} onChange={setSelectedMunicipios} placeholder="TODOS MUNICÍPIOS" />
+          <MultiSelect options={filterOptions.articuladores} selected={selectedArticuladores} onChange={setSelectedArticuladores} placeholder="TODOS ARTICULADORES" />
+          <MultiSelect options={filterOptions.classes} selected={selectedClasses} onChange={setSelectedClasses} placeholder="TODAS CLASSES" />
         </div>
       </div>
-
-      <div className="flex flex-col md:flex-row gap-4 w-full">
-        <MultiSelect options={filterOptions.municipios} selected={selectedMunicipios} onChange={setSelectedMunicipios} placeholder="TODOS MUNICÍPIOS" />
-        <MultiSelect options={filterOptions.articuladores} selected={selectedArticuladores} onChange={setSelectedArticuladores} placeholder="TODOS ARTICULADORES" />
-        <MultiSelect options={filterOptions.classes} selected={selectedClasses} onChange={setSelectedClasses} placeholder="TODAS CLASSES" />
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderDashboard = () => (
     <div className="space-y-8 pb-10">
@@ -713,7 +734,7 @@ export default function App() {
           <div className="bg-[#C1272D] border-[4px] border-[#111111] px-4 py-2 shadow-[4px_4px_0px_0px_#111111] flex items-center gap-4 text-[#Fdfcf0]">
             <span className="font-black uppercase text-[11px] tracking-widest flex items-center gap-2">
                 <span className="w-3 h-3 bg-[#Fdfcf0] border-[2px] border-[#111111] block"></span>
-                Filtro de Urgência Ativo
+                Filtro de Prioridade Ativo
             </span>
             <button onClick={() => setShowOnlyImportant(false)} className="bg-[#111111] text-[#Fdfcf0] px-3 py-1 font-black text-[9px] uppercase border-[2px] border-[#Fdfcf0] hover:bg-[#Fdfcf0] hover:text-[#111111] transition-colors">Limpar</button>
           </div>
@@ -731,14 +752,14 @@ export default function App() {
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredEvents.map((ev, i) => {
-                const impRaw = normalizerFilter(ev['Importância'] || '');
-                let impLevel = null; let impColor = ''; let impText = '';
-                if (impRaw.includes('alta') || impRaw.includes('urgente') || impRaw === '1') {
-                    impLevel = 'alta'; impColor = COLORS.crimson; impText = 'ALTA URGÊNCIA';
-                } else if (impRaw.includes('media') || impRaw === '2') {
-                    impLevel = 'media'; impColor = COLORS.mustard; impText = 'MÉDIA URGÊNCIA';
-                } else if (impRaw.includes('baixa') || impRaw === '3') {
-                    impLevel = 'baixa'; impColor = COLORS.teal; impText = 'BAIXA URGÊNCIA';
+                const prioRaw = normalizerFilter(ev['Prioridade'] || ev['Importância'] || '');
+                let prioLevel = null; let prioColor = ''; let prioText = '';
+                if (prioRaw.includes('alta') || prioRaw.includes('urgente') || prioRaw.includes('maxima') || prioRaw === '1') {
+                    prioLevel = 'alta'; prioColor = COLORS.crimson; prioText = 'ALTA PRIORIDADE';
+                } else if (prioRaw.includes('media') || prioRaw === '2') {
+                    prioLevel = 'media'; prioColor = COLORS.mustard; prioText = 'MÉDIA PRIORIDADE';
+                } else if (prioRaw.includes('baixa') || prioRaw === '3') {
+                    prioLevel = 'baixa'; prioColor = COLORS.teal; prioText = 'BAIXA PRIORIDADE';
                 }
 
                 return (
@@ -754,14 +775,19 @@ export default function App() {
                   <div className="mt-auto space-y-2 border-t-[3px] border-[#111111] pt-3">
                     <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#007D8A] border-2 border-[#111111] block flex-shrink-0"></span> {formatDate(ev['Início'])}</p>
                     <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#C1272D] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Município']}</p>
-                    <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#EAA221] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Articulador'] || 'SEM ARTICULADOR'}</p>
+                    
+                    {ev['Articulador'] && ev['Articulador'].trim() !== '' && (
+                       <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-2">
+                         <span className="w-2.5 h-2.5 bg-[#EAA221] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Articulador']}
+                       </p>
+                    )}
                   </div>
                   
                   <div className="flex justify-between items-end mt-4">
-                    {impLevel ? (
+                    {prioLevel ? (
                         <div className="border-[3px] border-[#111111] flex items-stretch text-[8px] font-black uppercase bg-[#ffffff]">
-                            <div className="w-1.5 border-r-[3px] border-[#111111]" style={{ backgroundColor: impColor }}></div>
-                            <span className="px-1.5 py-0.5">{impText}</span>
+                            <div className="w-1.5 border-r-[3px] border-[#111111]" style={{ backgroundColor: prioColor }}></div>
+                            <span className="px-1.5 py-0.5">{prioText}</span>
                         </div>
                     ) : <div></div>}
                     <div className="border-[3px] border-[#111111] px-2 py-1 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
@@ -790,15 +816,15 @@ export default function App() {
                 </thead>
                 <tbody>
                   {filteredEvents.map((ev, i) => {
-                    const impRaw = normalizerFilter(ev['Importância'] || '');
-                    let impColor = '';
-                    if (impRaw.includes('alta') || impRaw.includes('urgente') || impRaw === '1') impColor = COLORS.crimson;
-                    else if (impRaw.includes('media') || impRaw === '2') impColor = COLORS.mustard;
+                    const prioRaw = normalizerFilter(ev['Prioridade'] || ev['Importância'] || '');
+                    let prioColor = '';
+                    if (prioRaw.includes('alta') || prioRaw.includes('urgente') || prioRaw.includes('maxima') || prioRaw === '1') prioColor = COLORS.crimson;
+                    else if (prioRaw.includes('media') || prioRaw === '2') prioColor = COLORS.mustard;
 
                     return (
                     <tr key={i} onClick={() => setSelectedEvent(ev)} className="border-b-[3px] border-[#111111] hover:bg-[#Fdfcf0] cursor-pointer">
                       <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate text-[#111111] flex items-center gap-2" title={ev['Título']}>
-                        {impColor && <div className="w-2 h-2 border-[2px] border-[#111111] flex-shrink-0" style={{ backgroundColor: impColor }}></div>}
+                        {prioColor && <div className="w-2 h-2 border-[2px] border-[#111111] flex-shrink-0" style={{ backgroundColor: prioColor }}></div>}
                         <span className="truncate">{ev['Título']}</span>
                       </td>
                       <td className="px-4 py-3 text-[10px] font-bold text-[#111111]">{formatDate(ev['Início'])}</td>
@@ -811,7 +837,7 @@ export default function App() {
                       ) : (
                         <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[150px]">{ev['Município']}</td>
                       )}
-                      <td className="px-4 py-3 text-[10px] font-bold text-[#EAA221]">{ev['Articulador'] || '-'}</td>
+                      <td className="px-4 py-3 text-[10px] font-bold text-[#EAA221]">{ev['Articulador'] || ''}</td>
                     </tr>
                   )})}
                 </tbody>
@@ -828,7 +854,7 @@ export default function App() {
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
         <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col">
           <div className="flex items-center gap-3 border-b-[4px] border-[#Fdfcf0] pb-2">
-             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-10 h-10 border-[2px] border-[#Fdfcf0] bg-[#Fdfcf0]" />
+             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-10 h-10 border-[2px] border-[#Fdfcf0] bg-transparent" />
              <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none">TABULUM</h1>
           </div>
           <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-2 bg-[#111111] py-1 border-[2px] border-[#Fdfcf0] w-full text-center">GESTÃO DE AGENDAS</p>
@@ -863,11 +889,11 @@ export default function App() {
           <button 
             onClick={() => { setActiveTab('list'); setShowOnlyImportant(!showOnlyImportant); setShowFuture(true); setShowPast(false); }} 
             className={`mt-4 flex items-center justify-between px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${showOnlyImportant ? 'bg-[#C1272D] text-[#Fdfcf0] shadow-[4px_4px_0px_0px_#C1272D]' : 'bg-[#111111] text-[#Fdfcf0] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}
-            title="Mostrar próximos eventos classificados como Importantes/Urgentes"
+            title="Mostrar próximos eventos de alta prioridade"
           >
             <div className="flex items-center gap-3">
                <span className="w-2.5 h-2.5 bg-[#C1272D] border-[2px] border-[#111111] block"></span>
-               URGENTES
+               PRIORIDADES
             </div>
             <span className="bg-[#Fdfcf0] text-[#111111] px-2 py-0.5 border-[2px] border-[#111111] text-[10px]">{upcomingImportantCount}</span>
           </button>
@@ -898,6 +924,7 @@ export default function App() {
         )}
       </main>
 
+      {}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex justify-end animate-fade-in">
           <div className="bg-[#Fdfcf0] w-full max-w-lg h-full border-l-[6px] border-[#111111] flex flex-col overflow-y-auto shadow-[-10px_0px_0px_0px_rgba(0,0,0,0.3)]">
@@ -909,9 +936,21 @@ export default function App() {
               <button onClick={() => setSelectedEvent(null)} className="p-2 bg-[#C1272D] text-[#Fdfcf0] border-[3px] border-[#111111] hover:bg-[#8B1C20] shadow-[3px_3px_0px_0px_#111111]">X</button>
             </div>
             <div className="p-6 space-y-6">
-              <select value={selectedEvent['STATUS'] || 'Pendente'} onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} className="w-full bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-[#111111] text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none">
-                <option value="Pendente">Pendente</option><option value="Confirmado">Confirmado</option><option value="Realizado">Realizado</option>
-              </select>
+              
+              <div className="flex flex-col md:flex-row gap-4">
+                <select value={selectedEvent['STATUS'] || 'Pendente'} onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} className="flex-1 bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-[#111111] text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer">
+                  <option value="Pendente">Status: Pendente</option>
+                  <option value="Confirmado">Status: Confirmado</option>
+                  <option value="Realizado">Status: Realizado</option>
+                </select>
+
+                <select value={selectedEvent['Prioridade'] || selectedEvent['Importância'] || 'Nenhuma'} onChange={(e) => handleUpdatePriority(selectedEvent.id, e.target.value)} className="flex-1 bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-[#111111] text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer">
+                  <option value="Nenhuma">Prioridade: Nenhuma</option>
+                  <option value="Alta">Prioridade: Alta</option>
+                  <option value="Média">Prioridade: Média</option>
+                  <option value="Baixa">Prioridade: Baixa</option>
+                </select>
+              </div>
 
               <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] space-y-4 text-[#111111]">
                 <div><label className="text-[9px] uppercase font-black text-[#007D8A] block">Município / Região (Floripa)</label>
@@ -923,7 +962,7 @@ export default function App() {
                 </div>
                 
                 <div className="border-t-[2px] border-dashed border-[#111111] pt-3">
-                  <label className="text-[9px] uppercase font-black text-[#EAA221] block">Forçar Articulador Manual (Col K)</label>
+                  <label className="text-[9px] uppercase font-black text-[#EAA221] block">Forçar Articulador Manual</label>
                   <div className="flex gap-2 mt-1">
                     <input 
                       type="text" 
