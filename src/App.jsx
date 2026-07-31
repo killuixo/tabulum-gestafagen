@@ -145,8 +145,10 @@ const normalizeData = (data) => {
         let v = item[k];
         if (typeof v === 'string') {
             let properV = toProperCase(v);
-            // Corrige "Plenaria" sem acento para "Plenária" mantendo o restante do texto
-            properV = properV.replace(/Plenaria/gi, 'Plenária');
+            // Corrige "Plenaria" incondicionalmente, mantendo todo o resto original
+            if (normalizerFilter(v).includes('plenaria')) {
+                properV = properV.replace(/plenaria/ig, 'Plenária');
+            }
             newItem['Classe de Atividade'] = properV;
         } else {
             newItem['Classe de Atividade'] = v;
@@ -155,13 +157,11 @@ const normalizeData = (data) => {
       
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
-      if (normK.includes('articulador') || normK.includes('responsavel')) newItem['Articulador'] = toProperCase(item[k]);
+      // Restringe rigidamente a captura de Articuladores à coluna exata (começada com Articulad)
+      if (normK.startsWith('articulad')) newItem['Articulador'] = toProperCase(item[k]);
       if (normK === 'status') newItem['STATUS'] = item[k];
       
-      // Capturando os níveis de importância ou prioridade
-      if (normK.includes('import') || normK.includes('urgenc') || normK === 'nivel de importancia' || normK.includes('prioridade')) {
-        newItem['Prioridade'] = toProperCase(item[k]);
-      }
+      // Capturando os níveis de importancia ou prioridade
     });
 
     Object.keys(newItem).forEach(k => {
@@ -460,15 +460,24 @@ export default function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   
   const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'desc' });
-  const [articuladorInputLocal, setArticuladorInputLocal] = useState('');
   
   const [showOnlyImportant, setShowOnlyImportant] = useState(false);
 
-  useEffect(() => {
-    if (selectedEvent) {
-      setArticuladorInputLocal(selectedEvent['ARTICULADOR - INPUT'] || '');
-    }
-  }, [selectedEvent]);
+  // Função para resetar o App (Ao clicar no título/ícone)
+  const resetApp = () => {
+    setSearch('');
+    setScopeCapital(true);
+    setScopeInterior(true);
+    setShowFuture(true);
+    setShowPast(false);
+    setShowPessoal(false);
+    setShowOnlyImportant(false);
+    setSelectedMunicipios([]);
+    setSelectedArticuladores([]);
+    setSelectedClasses([]);
+    setActiveTab('list');
+    setSelectedEvent(null);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -495,18 +504,6 @@ export default function App() {
     setEvents(events.map(ev => ev.id === id ? { ...ev, 'Prioridade': newPriority } : ev));
     if (selectedEvent && selectedEvent.id === id) setSelectedEvent({ ...selectedEvent, 'Prioridade': newPriority });
     if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, prioridade: newPriority }), redirect: "follow" }).catch(()=>{});
-  };
-
-  const handleUpdateArticulador = async (id, val) => {
-    const normVal = val ? toProperCase(val) : '';
-    setEvents(events.map(ev => {
-      if (ev.id === id) return { ...ev, 'ARTICULADOR - INPUT': val, 'Articulador': normVal || ev['Articulador'] };
-      return ev;
-    }));
-    if (selectedEvent && selectedEvent.id === id) {
-      setSelectedEvent({ ...selectedEvent, 'ARTICULADOR - INPUT': val, 'Articulador': normVal || selectedEvent['Articulador'] });
-    }
-    if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, articuladorInput: val }), redirect: "follow" }).catch(()=>{});
   };
 
   const filterOptions = useMemo(() => {
@@ -648,14 +645,18 @@ export default function App() {
                 onClick={() => setScopeCapital(!scopeCapital)} 
                 className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeCapital ? (isBothScopes ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#EAA221] text-[#111111]') : 'bg-[#111111] text-[#Fdfcf0]'}`}
               >
-                <div className={`w-3 h-3 border-[2px] ${scopeCapital ? (isBothScopes ? 'border-[#Fdfcf0] bg-[#Fdfcf0]' : 'border-[#111111] bg-[#111111]') : 'border-[#Fdfcf0] bg-transparent'}`}></div>
+                <div className={`w-3 h-3 flex items-center justify-center text-[10px] border-[2px] ${scopeCapital ? (isBothScopes ? 'border-[#Fdfcf0] bg-[#Fdfcf0] text-[#007D8A]' : 'border-[#111111] bg-[#111111] text-[#EAA221]') : 'border-[#Fdfcf0] bg-transparent text-transparent'}`}>
+                  {scopeCapital ? '✓' : ''}
+                </div>
                 FLORIANÓPOLIS
               </button>
               <button 
                 onClick={() => setScopeInterior(!scopeInterior)} 
                 className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeInterior ? (isBothScopes ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#EAA221] text-[#111111]') : 'bg-[#111111] text-[#Fdfcf0]'}`}
               >
-                <div className={`w-3 h-3 border-[2px] ${scopeInterior ? (isBothScopes ? 'border-[#Fdfcf0] bg-[#Fdfcf0]' : 'border-[#111111] bg-[#111111]') : 'border-[#Fdfcf0] bg-transparent'}`}></div>
+                <div className={`w-3 h-3 flex items-center justify-center text-[10px] border-[2px] ${scopeInterior ? (isBothScopes ? 'border-[#Fdfcf0] bg-[#Fdfcf0] text-[#007D8A]' : 'border-[#111111] bg-[#111111] text-[#EAA221]') : 'border-[#Fdfcf0] bg-transparent text-transparent'}`}>
+                  {scopeInterior ? '✓' : ''}
+                </div>
                 SANTA CATARINA
               </button>
            </div>
@@ -672,29 +673,42 @@ export default function App() {
             className="flex-1 px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
             value={search} onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap">
-            <button 
-              onClick={() => setShowFuture(!showFuture)} 
-              className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showFuture ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
-            >
-               <div className={`w-2.5 h-2.5 border-[2px] border-[#Fdfcf0] flex-shrink-0 ${showFuture ? 'bg-[#Fdfcf0]' : 'bg-transparent'}`}></div>
-               FUTUROS
-            </button>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap">
+              <button 
+                onClick={() => setShowFuture(!showFuture)} 
+                className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showFuture ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
+              >
+                 <div className={`w-2.5 h-2.5 flex items-center justify-center text-[8px] border-[2px] border-[#Fdfcf0] flex-shrink-0 ${showFuture ? 'bg-[#Fdfcf0] text-[#007D8A]' : 'bg-transparent text-transparent'}`}>
+                    {showFuture ? '✓' : ''}
+                 </div>
+                 FUTUROS
+              </button>
+              
+              <button 
+                onClick={() => setShowPast(!showPast)} 
+                className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPast ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
+              >
+                 <div className={`w-2.5 h-2.5 flex items-center justify-center text-[8px] border-[2px] ${showPast ? 'border-[#111111] bg-[#111111] text-[#EAA221]' : 'border-[#Fdfcf0] bg-transparent text-transparent'} flex-shrink-0`}>
+                    {showPast ? '✓' : ''}
+                 </div>
+                 PASSADOS
+              </button>
+              
+              <div className="w-px h-auto bg-[#333333] mx-1"></div>
+              
+              <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Alternar visibilidade de agendas pessoais">
+                 <div className={`w-2.5 h-2.5 flex items-center justify-center text-[8px] border-[2px] ${showPessoal ? 'border-[#111111] bg-[#111111] text-[#111111]' : 'border-[#Fdfcf0] bg-transparent text-transparent'} flex-shrink-0`}>
+                    {showPessoal ? '✓' : ''}
+                 </div>
+                 PESSOAL
+              </button>
+            </div>
             
-            <button 
-              onClick={() => setShowPast(!showPast)} 
-              className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPast ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
-            >
-               <div className={`w-2.5 h-2.5 border-[2px] ${showPast ? 'border-[#111111] bg-[#111111]' : 'border-[#Fdfcf0] bg-transparent'} flex-shrink-0`}></div>
-               PASSADOS
-            </button>
-            
-            <div className="w-px h-auto bg-[#333333] mx-1"></div>
-            
-            <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Alternar visibilidade de agendas pessoais">
-               <div className={`w-2.5 h-2.5 border-[2px] ${showPessoal ? 'border-[#111111] bg-[#111111]' : 'border-[#Fdfcf0] bg-transparent'} flex-shrink-0`}></div>
-               PESSOAL
-            </button>
+            <div className="flex bg-[#111111] p-1 border-[3px] border-[#111111]">
+              <button onClick={() => setViewMode('cards')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'cards' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Cards</button>
+              <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'table' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Lista</button>
+            </div>
           </div>
         </div>
 
@@ -739,10 +753,6 @@ export default function App() {
             <button onClick={() => setShowOnlyImportant(false)} className="bg-[#111111] text-[#Fdfcf0] px-3 py-1 font-black text-[9px] uppercase border-[2px] border-[#Fdfcf0] hover:bg-[#Fdfcf0] hover:text-[#111111] transition-colors">Limpar</button>
           </div>
         ) : <div />}
-        <div className="flex bg-[#111111] p-1 border-[3px] border-[#111111]">
-          <button onClick={() => setViewMode('cards')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'cards' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Cards</button>
-          <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'table' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Lista</button>
-        </div>
       </div>
 
       {filteredEvents.length === 0 ? (
@@ -783,13 +793,18 @@ export default function App() {
                     )}
                   </div>
                   
-                  <div className="flex justify-between items-end mt-4">
-                    {prioLevel ? (
-                        <div className="border-[3px] border-[#111111] flex items-stretch text-[8px] font-black uppercase bg-[#ffffff]">
-                            <div className="w-1.5 border-r-[3px] border-[#111111]" style={{ backgroundColor: prioColor }}></div>
-                            <span className="px-1.5 py-0.5">{prioText}</span>
-                        </div>
-                    ) : <div></div>}
+                  <div className="flex justify-between items-end mt-4 gap-2">
+                    <select 
+                        value={prioLevel === 'alta' ? 'Alta' : prioLevel === 'media' ? 'Média' : prioLevel === 'baixa' ? 'Baixa' : 'Nenhuma'} 
+                        onChange={(e) => { e.stopPropagation(); handleUpdatePriority(ev.id, e.target.value); }} 
+                        onClick={(e) => e.stopPropagation()}
+                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase bg-[#ffffff] outline-none cursor-pointer flex-1 ${prioColor ? 'text-[' + prioColor + ']' : 'text-[#111111]'}`}
+                    >
+                        <option value="Nenhuma">S/ Prioridade</option>
+                        <option value="Baixa">Prioridade: Baixa</option>
+                        <option value="Média">Prioridade: Média</option>
+                        <option value="Alta">Prioridade: Alta</option>
+                    </select>
                     <div className="border-[3px] border-[#111111] px-2 py-1 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
                   </div>
                 </div>
@@ -852,14 +867,16 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#Fdfcf0] font-sans text-[#111111] flex flex-col md:flex-row selection:bg-[#EAA221] selection:text-[#111111]">
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
-        <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col">
+        <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col cursor-pointer hover:bg-[#A31F25] transition-colors" onClick={resetApp} title="Voltar ao início / Limpar filtros">
           <div className="flex items-center gap-3 border-b-[4px] border-[#Fdfcf0] pb-2">
-             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-10 h-10 border-[2px] border-[#Fdfcf0] bg-transparent" />
              <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none">TABULUM</h1>
           </div>
-          <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-2 bg-[#111111] py-1 border-[2px] border-[#Fdfcf0] w-full text-center">GESTÃO DE AGENDAS</p>
+          <div className="flex items-center justify-center gap-2 mt-2 bg-[#111111] py-1 border-[2px] border-[#Fdfcf0] w-full">
+             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-4 h-4 bg-transparent" />
+             <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest m-0 leading-none">GESTÃO DE AGENDAS</p>
+          </div>
           
-          <div className="mt-6 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2">
+          <div className="mt-6 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2 cursor-default" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-end">
               <span className="text-[9px] font-black uppercase tracking-wider">Agendas Visíveis</span>
               <span className="text-xl font-black text-[#C1272D] leading-none">{summaryStats.total}</span>
@@ -924,10 +941,9 @@ export default function App() {
         )}
       </main>
 
-      {}
       {selectedEvent && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex justify-end animate-fade-in">
-          <div className="bg-[#Fdfcf0] w-full max-w-lg h-full border-l-[6px] border-[#111111] flex flex-col overflow-y-auto shadow-[-10px_0px_0px_0px_rgba(0,0,0,0.3)]">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex justify-end animate-fade-in" onClick={() => setSelectedEvent(null)}>
+          <div className="bg-[#Fdfcf0] w-full max-w-lg h-full border-l-[6px] border-[#111111] flex flex-col overflow-y-auto shadow-[-10px_0px_0px_0px_rgba(0,0,0,0.3)]" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 bg-[#ffffff] border-b-[4px] border-[#111111] sticky top-0 z-10 flex justify-between items-start">
               <div>
                 <span className="bg-[#111111] text-[#Fdfcf0] text-[9px] font-black uppercase px-2 py-1 border-[2px] border-[#111111]">{selectedEvent['Classe de Atividade']}</span>
@@ -956,29 +972,12 @@ export default function App() {
                 <div><label className="text-[9px] uppercase font-black text-[#007D8A] block">Município / Região (Floripa)</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Município']} {normalizerFilter(selectedEvent['Município']).includes('florianopolis') ? `/ ${selectedEvent['Região Floripa']}` : ''}</p></div>
                 
-                <div>
-                  <label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
-                  <p className="text-sm font-bold uppercase">{selectedEvent['Articulador'] || 'Não Definido'}</p>
-                </div>
-                
-                <div className="border-t-[2px] border-dashed border-[#111111] pt-3">
-                  <label className="text-[9px] uppercase font-black text-[#EAA221] block">Forçar Articulador Manual</label>
-                  <div className="flex gap-2 mt-1">
-                    <input 
-                      type="text" 
-                      placeholder="Nome manual..." 
-                      value={articuladorInputLocal} 
-                      onChange={(e) => setArticuladorInputLocal(e.target.value)} 
-                      className="flex-1 bg-[#Fdfcf0] border-[3px] border-[#111111] font-black text-[#111111] text-[10px] uppercase px-2 py-1 outline-none"
-                    />
-                    <button 
-                      onClick={() => handleUpdateArticulador(selectedEvent.id, articuladorInputLocal)} 
-                      className="bg-[#111111] text-[#Fdfcf0] border-[3px] border-[#111111] font-black uppercase text-[9px] px-3 hover:bg-[#333333] transition-colors"
-                    >
-                      Salvar
-                    </button>
+                {selectedEvent['Articulador'] && selectedEvent['Articulador'].trim() !== '' && (
+                  <div>
+                    <label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
+                    <p className="text-sm font-bold uppercase">{selectedEvent['Articulador']}</p>
                   </div>
-                </div>
+                )}
 
                 <div><label className="text-[9px] uppercase font-black text-[#C1272D] block">Local Físico</label>
                 <p className="text-sm font-bold uppercase">{selectedEvent['Local']}</p></div>
