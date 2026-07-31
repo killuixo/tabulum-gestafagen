@@ -886,10 +886,10 @@ export default function App() {
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
         <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col cursor-pointer hover:bg-[#A31F25] transition-colors" onClick={resetApp} title="Voltar ao início / Limpar filtros">
           
-          <div className="flex items-center gap-4 border-b-[4px] border-[#Fdfcf0] pb-4">
-             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-16 h-16 flex-shrink-0 bg-transparent object-contain drop-shadow-[2px_2px_0px_rgba(17,17,17,1)]" />
+          <div className="flex items-center gap-3 border-b-[4px] border-[#Fdfcf0] pb-4">
+             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-12 h-12 flex-shrink-0 bg-transparent object-contain drop-shadow-[2px_2px_0px_rgba(17,17,17,1)]" />
              <div className="flex flex-col flex-1">
-                <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] border-b-[4px] border-[#Fdfcf0] pb-1 m-0 leading-none">TABULUM</h1>
+                <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none pb-1">TABULUM</h1>
                 <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-1 bg-[#111111] px-2 py-1 border-[2px] border-[#Fdfcf0] w-full text-center m-0 leading-none">GESTÃO DE AGENDAS</p>
              </div>
           </div>
@@ -921,17 +921,19 @@ export default function App() {
           <button onClick={() => setActiveTab('list')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111] shadow-[4px_4px_0px_0px_#EAA221]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}><span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : '#Fdfcf0'}}></span>AGENDAS</button>
           <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'dashboard' ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#111111] shadow-[4px_4px_0px_0px_#007D8A]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}><span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='dashboard' ? '#111111' : '#Fdfcf0'}}></span>DASHBOARD</button>
           
-          <button 
-            onClick={() => { setActiveTab('list'); setShowOnlyImportant(!showOnlyImportant); setShowFuture(true); setShowPast(false); }} 
-            className={`mt-4 flex items-center justify-between px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${showOnlyImportant ? 'bg-[#C1272D] text-[#Fdfcf0] shadow-[4px_4px_0px_0px_#C1272D]' : 'bg-[#111111] text-[#Fdfcf0] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}
-            title="Mostrar próximos eventos de alta prioridade"
-          >
-            <div className="flex items-center gap-3">
-               <span className="w-2.5 h-2.5 bg-[#C1272D] border-[2px] border-[#111111] block"></span>
-               PRIORIDADES
-            </div>
-            <span className="bg-[#Fdfcf0] text-[#111111] px-2 py-0.5 border-[2px] border-[#111111] text-[10px]">{upcomingImportantCount}</span>
-          </button>
+          <div className="mt-4 pt-4 border-t-[3px] border-dashed border-[#Fdfcf0]">
+            <button 
+              onClick={() => { setActiveTab('list'); setShowOnlyImportant(!showOnlyImportant); setShowFuture(true); setShowPast(false); }} 
+              className={`w-full flex items-center justify-between px-4 py-3 border-[4px] border-[#111111] text-[11px] font-black uppercase transition-all shadow-[6px_6px_0px_0px_#111111] hover:-translate-y-1 ${showOnlyImportant ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#C1272D] text-[#Fdfcf0]'}`}
+              title="Mostrar próximos eventos de alta prioridade"
+            >
+              <div className="flex items-center gap-3">
+                 <span className={`w-3 h-3 border-[2px] border-[#111111] block ${showOnlyImportant ? 'bg-[#Fdfcf0]' : 'bg-[#EAA221]'}`}></span>
+                 PRIORIDADES
+              </div>
+              <span className="bg-[#Fdfcf0] text-[#111111] px-2 py-0.5 border-[3px] border-[#111111] text-[12px] shadow-[2px_2px_0px_0px_#111111]">{upcomingImportantCount}</span>
+            </button>
+          </div>
         </div>
         <div className="mt-auto hidden md:block p-6">
           <div className="bg-[#Fdfcf0] border-[4px] border-[#111111] p-4 shadow-[4px_4px_0px_0px_#111111]">
