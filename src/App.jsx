@@ -147,7 +147,7 @@ const normalizeData = (data) => {
             let properV = toProperCase(v);
             // Corrige "Plenaria" incondicionalmente, mantendo todo o resto original
             if (normalizerFilter(v).includes('plenaria')) {
-                properV = properV.replace(/plenaria/ig, 'Plenária');
+                properV = properV.replace(/Plenaria/ig, 'Plenária');
             }
             newItem['Classe de Atividade'] = properV;
         } else {
@@ -157,11 +157,14 @@ const normalizeData = (data) => {
       
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
-      // Restringe rigidamente a captura de Articuladores à coluna exata (começada com Articulad)
-      if (normK.startsWith('articulad')) newItem['Articulador'] = toProperCase(item[k]);
+      
+      // Restringe rigidamente a captura de Articuladores à coluna exata
+      if (normK === 'articulador') newItem['Articulador'] = toProperCase(item[k]);
+      
       if (normK === 'status') newItem['STATUS'] = item[k];
       
-      // Capturando os níveis de importancia ou prioridade
+      // Capturando os níveis de importancia ou prioridade (Coluna L)
+      if (normK === 'prioridade' || normK === 'importancia') newItem['Prioridade'] = item[k];
     });
 
     Object.keys(newItem).forEach(k => {
@@ -670,7 +673,7 @@ export default function App() {
         <div className="flex flex-col xl:flex-row gap-4 justify-between">
           <input 
             type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
-            className="flex-1 px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
+            className="flex-1 max-w-2xl px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
             value={search} onChange={(e) => setSearch(e.target.value)}
           />
           <div className="flex items-center gap-4 flex-wrap">
@@ -868,12 +871,16 @@ export default function App() {
     <div className="min-h-screen bg-[#Fdfcf0] font-sans text-[#111111] flex flex-col md:flex-row selection:bg-[#EAA221] selection:text-[#111111]">
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
         <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col cursor-pointer hover:bg-[#A31F25] transition-colors" onClick={resetApp} title="Voltar ao início / Limpar filtros">
-          <div className="flex items-center gap-3 border-b-[4px] border-[#Fdfcf0] pb-2">
-             <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none">TABULUM</h1>
+          
+          <div className="flex items-start gap-4 border-b-[4px] border-[#Fdfcf0] pb-3">
+             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-12 h-12 flex-shrink-0 bg-transparent object-contain drop-shadow-[2px_2px_0px_rgba(17,17,17,1)]" />
+             <div className="flex flex-col flex-1 mt-1">
+                <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none">TABULUM</h1>
+             </div>
           </div>
-          <div className="flex items-center justify-center gap-2 mt-2 bg-[#111111] py-1 border-[2px] border-[#Fdfcf0] w-full">
-             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-4 h-4 bg-transparent" />
-             <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest m-0 leading-none">GESTÃO DE AGENDAS</p>
+          
+          <div className="mt-2 bg-[#111111] py-1 border-[2px] border-[#Fdfcf0] w-full text-center">
+             <p className="text-[10px] text-[#Fdfcf0] font-black uppercase tracking-widest m-0 leading-none">GESTÃO DE AGENDAS</p>
           </div>
           
           <div className="mt-6 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2 cursor-default" onClick={(e) => e.stopPropagation()}>
