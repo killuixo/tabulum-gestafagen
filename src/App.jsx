@@ -31,9 +31,9 @@ const FLORIPA_POLYGONS = {
 };
 
 const MOCK_DATA = [
-  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date().toISOString(), 'Fim': new Date(Date.now() + 7200000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado' },
-  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Campeche, Florianópolis', 'Classe de Atividade': 'Comunidade', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente' },
-  { id: 4, 'Título': 'Aniversário Filho', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Privado.', 'Duração': 120, 'Local': 'Casa', 'Classe de Atividade': 'Pessoal (Família)', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Confirmado' },
+  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Florianópolis', 'Classe de Atividade': 'Sessão Legislativa', 'Município': 'Florianópolis', 'Articulador': 'João Silva', 'STATUS': 'Confirmado', 'Importância': 'Alta' },
+  { id: 3, 'Título': 'Reunião Associação', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Saneamento.', 'Duração': 120, 'Local': 'Campeche, Florianópolis', 'Classe de Atividade': 'Comunidade', 'Município': 'Florianópolis', 'Articulador': 'Maria Costa', 'STATUS': 'Pendente', 'Importância': 'Média' },
+  { id: 4, 'Título': 'Aniversário Filho', 'Início': new Date(Date.now() - 172800000).toISOString(), 'Fim': new Date(Date.now() - 162800000).toISOString(), 'Descrição': 'Privado.', 'Duração': 120, 'Local': 'Casa', 'Classe de Atividade': 'Pessoal (Família)', 'Município': 'Florianópolis', 'Articulador': 'Marquito', 'STATUS': 'Realizado', 'Importância': 'Baixa' },
 ];
 
 const formatDate = (dateString) => {
@@ -139,11 +139,20 @@ const normalizeData = (data) => {
       if (normK.includes('descri')) newItem['Descrição'] = item[k];
       if (normK.includes('duracao')) newItem['Duração'] = item[k];
       if (normK.includes('local')) newItem['Local'] = item[k];
-      if (normK === 'classe' || normK.includes('atividade')) newItem['Classe de Atividade'] = toProperCase(item[k]);
+      
+      if (normK === 'classe' || normK.includes('atividade')) {
+        let v = item[k];
+        if (typeof v === 'string' && normalizerFilter(v).includes('plenaria')) {
+            v = 'Plenária';
+        }
+        newItem['Classe de Atividade'] = toProperCase(v);
+      }
+      
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
       if (normK.includes('articulador') || normK.includes('responsavel')) newItem['Articulador'] = toProperCase(item[k]);
       if (normK === 'status') newItem['STATUS'] = item[k];
+      if (normK.includes('import') || normK.includes('urgenc') || normK === 'nivel de importancia') newItem['Importância'] = toProperCase(item[k]);
     });
 
     Object.keys(newItem).forEach(k => {
@@ -424,9 +433,15 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   
   const [search, setSearch] = useState('');
-  const [timeFilter, setTimeFilter] = useState('all');
-  const [locationScope, setLocationScope] = useState('all'); 
+  
+  // Novos filtros temporais padrão
+  const [showFuture, setShowFuture] = useState(true);
+  const [showPast, setShowPast] = useState(false);
   const [showPessoal, setShowPessoal] = useState(false); 
+  
+  // Novos filtros de escopo
+  const [scopeCapital, setScopeCapital] = useState(true);
+  const [scopeInterior, setScopeInterior] = useState(true);
   
   const [selectedMunicipios, setSelectedMunicipios] = useState([]);
   const [selectedArticuladores, setSelectedArticuladores] = useState([]);
@@ -437,6 +452,8 @@ export default function App() {
   
   const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'desc' });
   const [articuladorInputLocal, setArticuladorInputLocal] = useState('');
+  
+  const [showOnlyImportant, setShowOnlyImportant] = useState(false);
 
   useEffect(() => {
     if (selectedEvent) {
@@ -499,19 +516,29 @@ export default function App() {
 
   const filteredEvents = useMemo(() => {
     let result = events.filter(ev => {
-      if (timeFilter === 'future' && !isFuture(ev['Início'])) return false;
-      if (timeFilter === 'past' && !isPast(ev['Início'])) return false;
+      const isF = isFuture(ev['Início']);
+      const isP = isPast(ev['Início']);
+      
+      if (!showFuture && isF) return false;
+      if (!showPast && isP) return false;
+      if (!showFuture && !showPast) return false;
       
       const isPessoal = ev['Classe de Atividade'] && normalizerFilter(ev['Classe de Atividade']).includes('pessoal');
       if (!showPessoal && isPessoal) return false;
+
+      if (showOnlyImportant) {
+        const imp = normalizerFilter(ev['Importância'] || '');
+        if (!imp.includes('alta') && !imp.includes('urgente') && !imp.includes('importante') && imp !== '1') return false;
+      }
 
       if (selectedMunicipios.length > 0 && !selectedMunicipios.includes(ev['Município'])) return false;
       if (selectedArticuladores.length > 0 && !selectedArticuladores.includes(ev['Articulador'])) return false;
       if (selectedClasses.length > 0 && !selectedClasses.includes(ev['Classe de Atividade'])) return false;
       
       const isFloripa = normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa');
-      if (locationScope === 'capital' && !isFloripa) return false;
-      if (locationScope === 'interior' && isFloripa) return false;
+      if (!scopeCapital && isFloripa) return false;
+      if (!scopeInterior && !isFloripa) return false;
+      if (!scopeCapital && !scopeInterior) return false;
 
       if (search) {
         const term = normalizerFilter(search);
@@ -535,7 +562,7 @@ export default function App() {
       return 0;
     });
     return result;
-  }, [events, search, timeFilter, selectedMunicipios, selectedArticuladores, selectedClasses, locationScope, sortConfig, showPessoal]);
+  }, [events, search, showFuture, showPast, selectedMunicipios, selectedArticuladores, selectedClasses, scopeCapital, scopeInterior, sortConfig, showPessoal, showOnlyImportant]);
 
   const dashboardStats = useMemo(() => {
     const agg = (key) => {
@@ -587,12 +614,36 @@ export default function App() {
     return { total, capital, interior: total - capital, futuras, pendentes };
   }, [filteredEvents]);
 
+  const upcomingImportantCount = useMemo(() => {
+    return events.filter(ev => {
+        if (!isFuture(ev['Início'])) return false;
+        const imp = normalizerFilter(ev['Importância'] || '');
+        return imp.includes('alta') || imp.includes('urgente') || imp.includes('importante') || imp === '1';
+    }).length;
+  }, [events]);
+
   const renderGlobalFilters = () => (
     <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-8 flex flex-col gap-4 relative z-10 w-full">
-      <div className="flex flex-col md:flex-row gap-4 mb-2">
-        <button onClick={() => setLocationScope('all')} className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 ${locationScope === 'all' ? 'bg-[#111111] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}>GERAL (SC + CAPITAL)</button>
-        <button onClick={() => setLocationScope('capital')} className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 ${locationScope === 'capital' ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}>SOMENTE CAPITAL</button>
-        <button onClick={() => setLocationScope('interior')} className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 ${locationScope === 'interior' ? 'bg-[#C1272D] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}>SOMENTE INTERIOR</button>
+      <div className="flex flex-col gap-2 mb-2">
+         <div className="flex flex-col md:flex-row gap-4">
+            <button 
+              onClick={() => setScopeCapital(!scopeCapital)} 
+              className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeCapital ? 'bg-[#111111] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+            >
+              <div className={`w-3 h-3 border-[2px] border-[#111111] ${scopeCapital ? 'bg-[#Fdfcf0]' : 'bg-[#111111]'}`}></div>
+              FLORIANÓPOLIS
+            </button>
+            <button 
+              onClick={() => setScopeInterior(!scopeInterior)} 
+              className={`flex-1 py-3 px-4 text-[11px] font-black uppercase border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] transition-transform hover:-translate-y-1 flex items-center justify-center gap-2 ${scopeInterior ? 'bg-[#111111] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+            >
+              <div className={`w-3 h-3 border-[2px] border-[#111111] ${scopeInterior ? 'bg-[#Fdfcf0]' : 'bg-[#111111]'}`}></div>
+              SANTA CATARINA
+            </button>
+         </div>
+         <div className="text-[9px] font-black uppercase text-[#111111] text-center bg-[#Fdfcf0] py-1 border-[2px] border-[#111111] border-dashed">
+           Exibindo localidade: {scopeCapital && scopeInterior ? 'GERAL (CAPITAL E ESTADO)' : scopeCapital ? 'SOMENTE FLORIANÓPOLIS' : scopeInterior ? 'SOMENTE SANTA CATARINA' : 'NENHUMA REGIÃO SELECIONADA'}
+         </div>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-4 justify-between">
@@ -602,13 +653,25 @@ export default function App() {
           value={search} onChange={(e) => setSearch(e.target.value)}
         />
         <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap">
-          <button onClick={() => setTimeFilter('all')} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 ${timeFilter === 'all' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Tudo</button>
-          <button onClick={() => setTimeFilter('future')} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 ${timeFilter === 'future' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Futuras</button>
-          <button onClick={() => setTimeFilter('past')} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 ${timeFilter === 'past' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Realizadas</button>
+          <button 
+            onClick={() => setShowFuture(!showFuture)} 
+            className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showFuture ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
+          >
+             <div className={`w-2.5 h-2.5 border-[2px] border-[#Fdfcf0] flex-shrink-0 ${showFuture ? 'bg-[#Fdfcf0]' : 'bg-transparent'}`}></div>
+             FUTUROS
+          </button>
+          
+          <button 
+            onClick={() => setShowPast(!showPast)} 
+            className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPast ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
+          >
+             <div className={`w-2.5 h-2.5 border-[2px] border-[#111111] flex-shrink-0 ${showPast ? 'bg-[#111111]' : 'bg-[#Fdfcf0]'}`}></div>
+             PASSADOS
+          </button>
           
           <div className="w-px h-auto bg-[#333333] mx-1"></div>
           
-          <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Alternar visibilidade de agendas pessoais">
+          <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Alternar visibilidade de agendas pessoais">
              <div className={`w-2.5 h-2.5 border-[2px] border-[#111111] flex-shrink-0 ${showPessoal ? 'bg-[#111111]' : 'bg-[#Fdfcf0]'}`}></div>
              PESSOAL
           </button>
@@ -645,7 +708,16 @@ export default function App() {
 
   const renderList = () => (
     <div className="space-y-6 pb-10 relative z-0">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center mb-2">
+        {showOnlyImportant ? (
+          <div className="bg-[#C1272D] border-[4px] border-[#111111] px-4 py-2 shadow-[4px_4px_0px_0px_#111111] flex items-center gap-4 text-[#Fdfcf0]">
+            <span className="font-black uppercase text-[11px] tracking-widest flex items-center gap-2">
+                <span className="w-3 h-3 bg-[#Fdfcf0] border-[2px] border-[#111111] block"></span>
+                Filtro de Urgência Ativo
+            </span>
+            <button onClick={() => setShowOnlyImportant(false)} className="bg-[#111111] text-[#Fdfcf0] px-3 py-1 font-black text-[9px] uppercase border-[2px] border-[#Fdfcf0] hover:bg-[#Fdfcf0] hover:text-[#111111] transition-colors">Limpar</button>
+          </div>
+        ) : <div />}
         <div className="flex bg-[#111111] p-1 border-[3px] border-[#111111]">
           <button onClick={() => setViewMode('cards')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'cards' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Cards</button>
           <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 text-[10px] font-black uppercase transition-colors border-2 ${viewMode === 'table' ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}>Lista</button>
@@ -658,19 +730,44 @@ export default function App() {
         <>
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredEvents.map((ev, i) => (
+              {filteredEvents.map((ev, i) => {
+                const impRaw = normalizerFilter(ev['Importância'] || '');
+                let impLevel = null; let impColor = ''; let impText = '';
+                if (impRaw.includes('alta') || impRaw.includes('urgente') || impRaw === '1') {
+                    impLevel = 'alta'; impColor = COLORS.crimson; impText = 'ALTA URGÊNCIA';
+                } else if (impRaw.includes('media') || impRaw === '2') {
+                    impLevel = 'media'; impColor = COLORS.mustard; impText = 'MÉDIA URGÊNCIA';
+                } else if (impRaw.includes('baixa') || impRaw === '3') {
+                    impLevel = 'baixa'; impColor = COLORS.teal; impText = 'BAIXA URGÊNCIA';
+                }
+
+                return (
                 <div key={i} onClick={() => setSelectedEvent(ev)} className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] hover:shadow-[10px_10px_0px_0px_#111111] hover:-translate-y-1 transition-all cursor-pointer flex flex-col h-full relative">
                   <div className="absolute top-0 right-0 w-8 h-8 border-l-[4px] border-b-[4px] border-[#111111]" style={{ backgroundColor: isFuture(ev['Início']) ? COLORS.teal : '#cccccc' }}></div>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-[#Fdfcf0] bg-[#111111] px-2 py-1 border-[2px] border-[#111111] self-start mb-3">{ev['Classe de Atividade'] || 'S/ CLASSE'}</span>
+                  
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-[#Fdfcf0] bg-[#111111] px-2 py-1 border-[2px] border-[#111111] self-start">{ev['Classe de Atividade'] || 'S/ CLASSE'}</span>
+                  </div>
+
                   <h3 className="font-black text-lg text-[#111111] leading-tight mb-4 uppercase line-clamp-3">{ev['Título']}</h3>
+                  
                   <div className="mt-auto space-y-2 border-t-[3px] border-[#111111] pt-3">
                     <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#007D8A] border-2 border-[#111111] block flex-shrink-0"></span> {formatDate(ev['Início'])}</p>
                     <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#C1272D] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Município']}</p>
-                    <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#EAA221] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Articulador']}</p>
+                    <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#EAA221] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Articulador'] || 'SEM ARTICULADOR'}</p>
                   </div>
-                  <div className="absolute bottom-3 right-3 border-[3px] border-[#111111] px-2 py-1 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
+                  
+                  <div className="flex justify-between items-end mt-4">
+                    {impLevel ? (
+                        <div className="border-[3px] border-[#111111] flex items-stretch text-[8px] font-black uppercase bg-[#ffffff]">
+                            <div className="w-1.5 border-r-[3px] border-[#111111]" style={{ backgroundColor: impColor }}></div>
+                            <span className="px-1.5 py-0.5">{impText}</span>
+                        </div>
+                    ) : <div></div>}
+                    <div className="border-[3px] border-[#111111] px-2 py-1 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
+                  </div>
                 </div>
-              ))}
+              )})}
             </div>
           ) : (
             <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] overflow-x-auto">
@@ -679,7 +776,7 @@ export default function App() {
                   <tr>
                     <th onClick={() => requestSort('Título')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Título{getSortIndicator('Título')}</th>
                     <th onClick={() => requestSort('Início')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Data{getSortIndicator('Início')}</th>
-                    {locationScope === 'capital' ? (
+                    {(!scopeCapital || !scopeInterior) && scopeCapital ? (
                       <>
                         <th onClick={() => requestSort('Bairro')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Bairro{getSortIndicator('Bairro')}</th>
                         <th onClick={() => requestSort('Distrito')} className="px-4 py-3 font-black border-b-[3px] border-[#Fdfcf0] cursor-pointer hover:bg-[#333333] transition-colors select-none">Distrito{getSortIndicator('Distrito')}</th>
@@ -692,11 +789,20 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEvents.map((ev, i) => (
+                  {filteredEvents.map((ev, i) => {
+                    const impRaw = normalizerFilter(ev['Importância'] || '');
+                    let impColor = '';
+                    if (impRaw.includes('alta') || impRaw.includes('urgente') || impRaw === '1') impColor = COLORS.crimson;
+                    else if (impRaw.includes('media') || impRaw === '2') impColor = COLORS.mustard;
+
+                    return (
                     <tr key={i} onClick={() => setSelectedEvent(ev)} className="border-b-[3px] border-[#111111] hover:bg-[#Fdfcf0] cursor-pointer">
-                      <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate text-[#111111]" title={ev['Título']}>{ev['Título']}</td>
+                      <td className="px-4 py-3 text-[11px] font-black uppercase max-w-[200px] truncate text-[#111111] flex items-center gap-2" title={ev['Título']}>
+                        {impColor && <div className="w-2 h-2 border-[2px] border-[#111111] flex-shrink-0" style={{ backgroundColor: impColor }}></div>}
+                        <span className="truncate">{ev['Título']}</span>
+                      </td>
                       <td className="px-4 py-3 text-[10px] font-bold text-[#111111]">{formatDate(ev['Início'])}</td>
-                      {locationScope === 'capital' ? (
+                      {(!scopeCapital || !scopeInterior) && scopeCapital ? (
                         <>
                           <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[120px]">{ev['Bairro']}</td>
                           <td className="px-4 py-3 text-[10px] font-bold text-[#007D8A] truncate max-w-[120px]">{ev['Distrito']}</td>
@@ -705,9 +811,9 @@ export default function App() {
                       ) : (
                         <td className="px-4 py-3 text-[10px] font-bold text-[#C1272D] truncate max-w-[150px]">{ev['Município']}</td>
                       )}
-                      <td className="px-4 py-3 text-[10px] font-bold text-[#EAA221]">{ev['Articulador']}</td>
+                      <td className="px-4 py-3 text-[10px] font-bold text-[#EAA221]">{ev['Articulador'] || '-'}</td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
@@ -720,9 +826,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#Fdfcf0] font-sans text-[#111111] flex flex-col md:flex-row selection:bg-[#EAA221] selection:text-[#111111]">
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
-        <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D]">
-          <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] border-b-[4px] border-[#Fdfcf0] pb-2 inline-block">TABULUM</h1>
-          <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-2 bg-[#111111] px-2 py-1 inline-block border-[2px] border-[#Fdfcf0]">GESTÃO DE AGENDAS</p>
+        <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col">
+          <div className="flex items-center gap-3 border-b-[4px] border-[#Fdfcf0] pb-2">
+             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-10 h-10 border-[2px] border-[#Fdfcf0] bg-[#Fdfcf0]" />
+             <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none">TABULUM</h1>
+          </div>
+          <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-2 bg-[#111111] py-1 border-[2px] border-[#Fdfcf0] w-full text-center">GESTÃO DE AGENDAS</p>
           
           <div className="mt-6 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2">
             <div className="flex justify-between items-end">
@@ -747,9 +856,21 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="flex flex-row md:flex-col p-4 gap-4 overflow-x-auto">
+        <div className="flex flex-row md:flex-col p-4 gap-4 overflow-x-auto flex-shrink-0">
           <button onClick={() => setActiveTab('list')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111] shadow-[4px_4px_0px_0px_#EAA221]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}><span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : '#Fdfcf0'}}></span>AGENDAS</button>
           <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'dashboard' ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#111111] shadow-[4px_4px_0px_0px_#007D8A]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}><span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='dashboard' ? '#111111' : '#Fdfcf0'}}></span>DASHBOARD</button>
+          
+          <button 
+            onClick={() => { setActiveTab('list'); setShowOnlyImportant(!showOnlyImportant); setShowFuture(true); setShowPast(false); }} 
+            className={`mt-4 flex items-center justify-between px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${showOnlyImportant ? 'bg-[#C1272D] text-[#Fdfcf0] shadow-[4px_4px_0px_0px_#C1272D]' : 'bg-[#111111] text-[#Fdfcf0] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}
+            title="Mostrar próximos eventos classificados como Importantes/Urgentes"
+          >
+            <div className="flex items-center gap-3">
+               <span className="w-2.5 h-2.5 bg-[#C1272D] border-[2px] border-[#111111] block"></span>
+               URGENTES
+            </div>
+            <span className="bg-[#Fdfcf0] text-[#111111] px-2 py-0.5 border-[2px] border-[#111111] text-[10px]">{upcomingImportantCount}</span>
+          </button>
         </div>
         <div className="mt-auto hidden md:block p-6">
           <div className="bg-[#Fdfcf0] border-[4px] border-[#111111] p-4 shadow-[4px_4px_0px_0px_#111111]">
@@ -794,11 +915,11 @@ export default function App() {
 
               <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] space-y-4 text-[#111111]">
                 <div><label className="text-[9px] uppercase font-black text-[#007D8A] block">Município / Região (Floripa)</label>
-                <p className="text-sm font-bold uppercase">{selectedEvent['Município']} {normalizerFilter(selectedEvent['Município']).includes('florianopolis') ? `/ ${getFloripaRegion(selectedEvent)}` : ''}</p></div>
+                <p className="text-sm font-bold uppercase">{selectedEvent['Município']} {normalizerFilter(selectedEvent['Município']).includes('florianopolis') ? `/ ${selectedEvent['Região Floripa']}` : ''}</p></div>
                 
                 <div>
                   <label className="text-[9px] uppercase font-black text-[#EAA221] block">Articulador</label>
-                  <p className="text-sm font-bold uppercase">{selectedEvent['Articulador']}</p>
+                  <p className="text-sm font-bold uppercase">{selectedEvent['Articulador'] || 'Não Definido'}</p>
                 </div>
                 
                 <div className="border-t-[2px] border-dashed border-[#111111] pt-3">
