@@ -158,7 +158,7 @@ const normalizeData = (data) => {
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
       
-      // Restringe rigidamente a captura de Articuladores à coluna exata
+      // Restringe rigidamente a captura de Articuladores à coluna exata (Coluna H)
       if (normK === 'articulador') newItem['Articulador'] = toProperCase(item[k]);
       
       if (normK === 'status') newItem['STATUS'] = item[k];
@@ -166,6 +166,11 @@ const normalizeData = (data) => {
       // Capturando os níveis de importancia ou prioridade (Coluna L)
       if (normK === 'prioridade' || normK === 'importancia') newItem['Prioridade'] = item[k];
     });
+
+    // Correção super agressiva para "Plenária" no Título (Força a Classe de Atividade)
+    if (newItem['Título'] && normalizerFilter(newItem['Título']).includes('plenaria')) {
+        newItem['Classe de Atividade'] = 'Plenária';
+    }
 
     Object.keys(newItem).forEach(k => {
       if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) newItem[k] = '';
@@ -670,13 +675,13 @@ export default function App() {
            </div>
         </div>
 
-        <div className="flex flex-col xl:flex-row gap-4 justify-between">
+        <div className="flex flex-col xl:flex-row gap-4 justify-between items-center">
           <input 
             type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
-            className="flex-1 max-w-2xl px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
+            className="flex-1 w-full max-w-lg px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
             value={search} onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap w-full xl:w-auto justify-end">
             <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap">
               <button 
                 onClick={() => setShowFuture(!showFuture)} 
@@ -801,14 +806,23 @@ export default function App() {
                         value={prioLevel === 'alta' ? 'Alta' : prioLevel === 'media' ? 'Média' : prioLevel === 'baixa' ? 'Baixa' : 'Nenhuma'} 
                         onChange={(e) => { e.stopPropagation(); handleUpdatePriority(ev.id, e.target.value); }} 
                         onClick={(e) => e.stopPropagation()}
-                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase bg-[#ffffff] outline-none cursor-pointer flex-1 ${prioColor ? 'text-[' + prioColor + ']' : 'text-[#111111]'}`}
+                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 ${prioLevel === 'alta' ? 'bg-[#C1272D] text-[#Fdfcf0]' : prioLevel === 'media' ? 'bg-[#EAA221] text-[#111111]' : prioLevel === 'baixa' ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
                     >
                         <option value="Nenhuma">S/ Prioridade</option>
-                        <option value="Baixa">Prioridade: Baixa</option>
-                        <option value="Média">Prioridade: Média</option>
-                        <option value="Alta">Prioridade: Alta</option>
+                        <option value="Baixa">Baixa</option>
+                        <option value="Média">Média</option>
+                        <option value="Alta">Alta</option>
                     </select>
-                    <div className="border-[3px] border-[#111111] px-2 py-1 text-[9px] font-black uppercase bg-[#ffffff]">{ev['STATUS'] || 'Pendente'}</div>
+                    <select 
+                        value={ev['STATUS'] || 'Pendente'} 
+                        onChange={(e) => { e.stopPropagation(); handleUpdateStatus(ev.id, e.target.value); }} 
+                        onClick={(e) => e.stopPropagation()}
+                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 ${(ev['STATUS'] === 'Confirmado') ? 'bg-[#007D8A] text-[#Fdfcf0]' : (ev['STATUS'] === 'Realizado') ? 'bg-[#EAA221] text-[#111111]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+                    >
+                        <option value="Pendente">Pendente</option>
+                        <option value="Confirmado">Confirmado</option>
+                        <option value="Realizado">Realizado</option>
+                    </select>
                   </div>
                 </div>
               )})}
@@ -872,15 +886,12 @@ export default function App() {
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
         <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col cursor-pointer hover:bg-[#A31F25] transition-colors" onClick={resetApp} title="Voltar ao início / Limpar filtros">
           
-          <div className="flex items-start gap-4 border-b-[4px] border-[#Fdfcf0] pb-3">
-             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-12 h-12 flex-shrink-0 bg-transparent object-contain drop-shadow-[2px_2px_0px_rgba(17,17,17,1)]" />
-             <div className="flex flex-col flex-1 mt-1">
-                <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none">TABULUM</h1>
+          <div className="flex items-center gap-4 border-b-[4px] border-[#Fdfcf0] pb-4">
+             <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-16 h-16 flex-shrink-0 bg-transparent object-contain drop-shadow-[2px_2px_0px_rgba(17,17,17,1)]" />
+             <div className="flex flex-col flex-1">
+                <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] border-b-[4px] border-[#Fdfcf0] pb-1 m-0 leading-none">TABULUM</h1>
+                <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-1 bg-[#111111] px-2 py-1 border-[2px] border-[#Fdfcf0] w-full text-center m-0 leading-none">GESTÃO DE AGENDAS</p>
              </div>
-          </div>
-          
-          <div className="mt-2 bg-[#111111] py-1 border-[2px] border-[#Fdfcf0] w-full text-center">
-             <p className="text-[10px] text-[#Fdfcf0] font-black uppercase tracking-widest m-0 leading-none">GESTÃO DE AGENDAS</p>
           </div>
           
           <div className="mt-6 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2 cursor-default" onClick={(e) => e.stopPropagation()}>
@@ -961,17 +972,28 @@ export default function App() {
             <div className="p-6 space-y-6">
               
               <div className="flex flex-col md:flex-row gap-4">
-                <select value={selectedEvent['STATUS'] || 'Pendente'} onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} className="flex-1 bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-[#111111] text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer">
-                  <option value="Pendente">Status: Pendente</option>
-                  <option value="Confirmado">Status: Confirmado</option>
-                  <option value="Realizado">Status: Realizado</option>
+                <select 
+                  value={selectedEvent['STATUS'] || 'Pendente'} 
+                  onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} 
+                  className={`flex-1 border-[4px] border-[#111111] font-black text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer ${(selectedEvent['STATUS'] === 'Confirmado') ? 'bg-[#007D8A] text-[#Fdfcf0]' : (selectedEvent['STATUS'] === 'Realizado') ? 'bg-[#EAA221] text-[#111111]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+                >
+                  <option value="Pendente">Pendente</option>
+                  <option value="Confirmado">Confirmado</option>
+                  <option value="Realizado">Realizado</option>
                 </select>
 
-                <select value={selectedEvent['Prioridade'] || selectedEvent['Importância'] || 'Nenhuma'} onChange={(e) => handleUpdatePriority(selectedEvent.id, e.target.value)} className="flex-1 bg-[#Fdfcf0] border-[4px] border-[#111111] font-black text-[#111111] text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer">
-                  <option value="Nenhuma">Prioridade: Nenhuma</option>
-                  <option value="Alta">Prioridade: Alta</option>
-                  <option value="Média">Prioridade: Média</option>
-                  <option value="Baixa">Prioridade: Baixa</option>
+                <select 
+                  value={selectedEvent['Prioridade'] || selectedEvent['Importância'] || 'Nenhuma'} 
+                  onChange={(e) => handleUpdatePriority(selectedEvent.id, e.target.value)} 
+                  className={`flex-1 border-[4px] border-[#111111] font-black text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer ${
+                    (selectedEvent['Prioridade'] === 'Alta' || selectedEvent['Prioridade'] === '1') ? 'bg-[#C1272D] text-[#Fdfcf0]' : 
+                    (selectedEvent['Prioridade'] === 'Média' || selectedEvent['Prioridade'] === '2') ? 'bg-[#EAA221] text-[#111111]' : 
+                    (selectedEvent['Prioridade'] === 'Baixa' || selectedEvent['Prioridade'] === '3') ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+                >
+                  <option value="Nenhuma">S/ Prioridade</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Média">Média</option>
+                  <option value="Baixa">Baixa</option>
                 </select>
               </div>
 
