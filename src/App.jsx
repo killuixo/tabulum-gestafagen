@@ -949,8 +949,11 @@ export default function App() {
       <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative z-0">
         {loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#Fdfcf0] z-10 gap-6">
-            <div className="w-16 h-16 bg-[#EAA221] border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] animate-spin"></div>
-            <div className="font-black uppercase tracking-widest text-[#111111] text-lg bg-[#ffffff] px-4 py-2 border-[4px] border-[#111111]">Carregando Dados...</div>
+            <div className="w-16 h-16 rounded-full border-[8px] border-t-[#C1272D] border-r-[#EAA221] border-b-[#007D8A] border-l-transparent animate-spin"></div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="font-black uppercase tracking-widest text-[#111111] text-lg bg-[#ffffff] px-4 py-2 border-[4px] border-[#111111]">Carregando Dados...</div>
+              <p className="text-[10px] font-black uppercase text-[#111111] tracking-wider opacity-80">Isto pode levar alguns instantes, aguarde.</p>
+            </div>
           </div>
         ) : (
           <div className="w-full max-w-7xl mx-auto h-full animate-fade-in">
