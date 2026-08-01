@@ -467,7 +467,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState('cards');
   const [selectedEvent, setSelectedEvent] = useState(null);
   
-  const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'asc' });
   
   const [showOnlyImportant, setShowOnlyImportant] = useState(false);
 
@@ -485,6 +485,7 @@ export default function App() {
     setSelectedClasses([]);
     setActiveTab('list');
     setSelectedEvent(null);
+    setSortConfig({ key: 'Início', direction: 'asc' });
   };
 
   useEffect(() => {
@@ -710,6 +711,16 @@ export default function App() {
                     {showPessoal ? '✓' : ''}
                  </div>
                  PESSOAL
+              </button>
+              
+              <div className="w-px h-auto bg-[#333333] mx-1"></div>
+              
+              <button 
+                onClick={() => setSortConfig(prev => ({ key: 'Início', direction: prev.key === 'Início' && prev.direction === 'asc' ? 'desc' : 'asc' }))} 
+                className="px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 text-[#Fdfcf0] border-transparent hover:bg-[#333333] transition-colors" 
+                title="Alternar ordem de exibição cronológica"
+              >
+                 ORDEM: {(sortConfig.key === 'Início' && sortConfig.direction === 'desc') ? 'DECRESCENTE ▼' : 'CRESCENTE ▲'}
               </button>
             </div>
             
