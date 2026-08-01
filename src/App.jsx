@@ -278,7 +278,7 @@ const SimplePieChart = ({ data, title }) => {
 const SimpleLineChart = ({ data, title }) => {
   if (!data || data.length === 0) {
      return (
-       <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center justify-center min-h-[300px]">
+       <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center justify-center min-h-[350px]">
           <h3 className="text-[12px] font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
           <span className="text-[10px] font-black text-[#111111] opacity-50 uppercase">Sem dados válidos no período</span>
        </div>
@@ -286,9 +286,9 @@ const SimpleLineChart = ({ data, title }) => {
   }
 
   const maxVal = Math.max(...data.map(d => d.value), 4);
-  const width = 800;
-  const height = 250;
-  const padding = 40;
+  const width = 1000;
+  const height = 350;
+  const padding = 60;
 
   const points = data.map((d, i) => {
     const x = padding + (i * (width - 2 * padding) / Math.max(data.length - 1, 1));
@@ -309,8 +309,12 @@ const SimpleLineChart = ({ data, title }) => {
           {points.map((p, i) => (
             <g key={i}>
               <rect x={p.x - 6} y={p.y - 6} width="12" height="12" fill="#Fdfcf0" stroke="#111111" strokeWidth="3" />
-              <text x={p.x} y={p.y - 15} textAnchor="middle" fontSize="12" fontWeight="900" fill="#111111">{p.value}</text>
-              <text x={p.x} y={height - 15} textAnchor="middle" fontSize="10" fontWeight="900" fill="#111111">{p.name}</text>
+              {/* Stroke branco (fundo falso) para o texto flutuar acima da linha sem poluição visual */}
+              <text x={p.x} y={p.y - 15} textAnchor="middle" fontSize="14" fontWeight="900" stroke="#Fdfcf0" strokeWidth="4" strokeLinejoin="round" fill="none">{p.value}</text>
+              <text x={p.x} y={p.y - 15} textAnchor="middle" fontSize="14" fontWeight="900" fill="#111111">{p.value}</text>
+              
+              <text x={p.x} y={height - 25} textAnchor="middle" fontSize="11" fontWeight="900" stroke="#Fdfcf0" strokeWidth="4" strokeLinejoin="round" fill="none">{p.name}</text>
+              <text x={p.x} y={height - 25} textAnchor="middle" fontSize="11" fontWeight="900" fill="#111111">{p.name}</text>
             </g>
           ))}
         </svg>
@@ -319,7 +323,7 @@ const SimpleLineChart = ({ data, title }) => {
   );
 };
 
-const GoogleStyleMarkerMap = ({ events, title, isFloripa }) => {
+const GoogleStyleMarkerMap = ({ events, title, isFloripa, onMarkerClick }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const geoJsonLayerRef = useRef(null);
@@ -406,18 +410,27 @@ const GoogleStyleMarkerMap = ({ events, title, isFloripa }) => {
               html: iconHtml,
               iconSize: [20, 20],
               iconAnchor: [10, 10],
-              popupAnchor: [0, -10]
+              popupAnchor: [0, -10],
+              tooltipAnchor: [0, -15]
             });
 
             const marker = window.L.marker(finalCoords, { icon: customIcon });
-            marker.bindPopup(`
+            
+            // Alterado de bindPopup (ao clicar) para bindTooltip (ao passar o mouse)
+            marker.bindTooltip(`
               <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111; min-width: 150px; padding: 4px;">
                 <div style="font-size: 8px; color: #ffffff; background: #111111; padding: 2px 4px; display: inline-block; margin-bottom: 6px; border: 1px solid #111111;">${ev['Classe de Atividade'] || 'SEM CLASSE'}</div>
                 <div style="font-size: 11px; margin-bottom: 6px; line-height: 1.2;">${ev['Título']}</div>
                 <div style="color: #C1272D; font-size: 9px; margin-bottom: 2px;">📍 ${ev['Local'] || ev['Município']}</div>
                 <div style="color: #007D8A; font-size: 9px;">🕒 ${formatDate(ev['Início'])}</div>
               </div>
-            `);
+            `, { direction: 'top', className: 'custom-leaflet-tooltip' });
+            
+            // Adicionado evento de Clique que dispara a função vinda do App.jsx
+            marker.on('click', () => {
+              if (onMarkerClick) onMarkerClick(ev['Município']);
+            });
+            
             geoJsonLayerRef.current.addLayer(marker);
          }
       });
@@ -455,7 +468,8 @@ const GoogleStyleMarkerMap = ({ events, title, isFloripa }) => {
         <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#EAA221] border-[2px] border-[#111111] transform rotate-45 block"></span><span className="text-[8px] font-black uppercase text-[#111111] ml-1">Média</span></div>
         <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#C1272D] border-[2px] border-[#111111] transform rotate-45 block"></span><span className="text-[8px] font-black uppercase text-[#111111] ml-1">Alta</span></div>
       </div>
-      <div className="w-full h-[400px] border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
+      {/* Aumento radical do quadro do Mapa de 400px para 600px */}
+      <div className="w-full h-[600px] border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
         <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 0 }}></div>
       </div>
     </div>
@@ -487,6 +501,15 @@ export default function App() {
   
   const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'asc' });
   const [showOnlyImportant, setShowOnlyImportant] = useState(false);
+
+  // Nova função acionada ao clicar em um marcador no Mapa do Dashboard
+  const handleMapClick = (municipio) => {
+    setSelectedMunicipios([municipio]);
+    setScopeCapital(true);
+    setScopeInterior(true);
+    setActiveTab('list');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const resetApp = () => {
     setSearch('');
@@ -617,11 +640,17 @@ export default function App() {
     const temporalDataMap = {};
     filteredEvents.forEach(ev => {
       if (!ev['Início']) return;
-      const date = new Date(ev['Início']);
-      if (isNaN(date)) return;
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      temporalDataMap[key] = (temporalDataMap[key] || 0) + 1;
+      // Abordagem rígida e à prova de falhas com fuso-horários: recorta estritamente pelo texto
+      const dataStr = ev['Início'].split('T')[0];
+      if (!dataStr) return;
+      
+      const parts = dataStr.split('-');
+      if (parts.length >= 2) {
+         const key = `${parts[0]}-${parts[1]}`;
+         temporalDataMap[key] = (temporalDataMap[key] || 0) + 1;
+      }
     });
+    
     const temporalLine = Object.entries(temporalDataMap)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([key, value]) => {
@@ -762,11 +791,11 @@ export default function App() {
         </span>
       </div>
       
-      {/* 1. Bar: Classes, 2. Pie: Articuladores, 3. Pie: Classes */}
+      {/* 1. Bar: Classes, 2. Pie: Classes (Reposicionado), 3. Pie: Articuladores (Reposicionado) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores" /></div>
         <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.classes} title="Classes (Proporção)" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores" /></div>
       </div>
       
       <div className="mt-8">
@@ -774,8 +803,9 @@ export default function App() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 mt-8">
-        <GoogleStyleMarkerMap events={filteredEvents.filter(e => !normalizerFilter(e['Município']).includes('florianopolis') && !normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Santa Catarina" isFloripa={false} />
-        <GoogleStyleMarkerMap events={filteredEvents.filter(e => normalizerFilter(e['Município']).includes('florianopolis') || normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Florianópolis" isFloripa={true} />
+        {/* Passando o manipulador de clique para os componentes dos Mapas */}
+        <GoogleStyleMarkerMap events={filteredEvents.filter(e => !normalizerFilter(e['Município']).includes('florianopolis') && !normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Santa Catarina" isFloripa={false} onMarkerClick={handleMapClick} />
+        <GoogleStyleMarkerMap events={filteredEvents.filter(e => normalizerFilter(e['Município']).includes('florianopolis') || normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Florianópolis" isFloripa={true} onMarkerClick={handleMapClick} />
       </div>
     </div>
   );
