@@ -20,64 +20,14 @@ const COLORS = {
 const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal];
 
 // ==========================================
-// DICIONÁRIOS CARTOGRÁFICOS & GEOLOCALIZAÇÃO
+// POLÍGONOS CARTOGRÁFICOS E DICIONÁRIOS
 // ==========================================
-const GEO_COORDS = {
-  // Floripa - Bairros Principais
-  'centro': [-27.595, -48.548],
-  'trindade': [-27.583, -48.523],
-  'itacorubi': [-27.575, -48.508],
-  'agronomica': [-27.576, -48.536],
-  'campeche': [-27.681, -48.497],
-  'lagoa da conceicao': [-27.603, -48.461],
-  'ingleses': [-27.436, -48.397],
-  'canasvieiras': [-27.428, -48.461],
-  'jurere': [-27.438, -48.493],
-  'rio vermelho': [-27.493, -48.406],
-  'santo antonio de lisboa': [-27.502, -48.514],
-  'sambaqui': [-27.485, -48.528],
-  'ribeirao da ilha': [-27.721, -48.536],
-  'pantano do sul': [-27.781, -48.509],
-  'saco dos limoes': [-27.608, -48.532],
-  'saco grande': [-27.545, -48.498],
-  'coqueiros': [-27.602, -48.579],
-  'estreito': [-27.585, -48.577],
-  'cacupe': [-27.531, -48.523],
-  'monte verde': [-27.551, -48.498],
-  'joao paulo': [-27.561, -48.512],
-  'capoeiras': [-27.595, -48.598],
-  // Principais Municípios SC
-  'florianopolis': [-27.595, -48.548],
-  'sao jose': [-27.613, -48.627],
-  'palhoca': [-27.644, -48.667],
-  'biguacu': [-27.496, -48.657],
-  'joinville': [-26.304, -48.848],
-  'blumenau': [-26.919, -49.066],
-  'itajai': [-26.907, -48.666],
-  'balneario camboriu': [-27.000, -48.625],
-  'criciuma': [-28.677, -49.370],
-  'chapeco': [-27.098, -52.613],
-  'lages': [-27.810, -50.326],
-  'jaragua do sul': [-26.485, -49.072],
-  'tubarao': [-28.480, -49.006],
-  'brusque': [-27.097, -48.910],
-  'sao bento do sul': [-26.250, -49.380],
-  'cacador': [-26.775, -51.015],
-  'concordia': [-27.235, -52.025],
-  'rio do sul': [-27.214, -49.642],
-  'ararangua': [-28.934, -49.485],
-  'gaspar': [-26.931, -48.953],
-  'indaial': [-26.896, -49.231],
-  'mafra': [-26.113, -49.805],
-  'navegantes': [-26.897, -48.654],
-  'sao francisco do sul': [-26.244, -48.638],
-  'canoinhas': [-26.177, -50.390],
-  'videira': [-27.005, -51.151],
-  'xanxere': [-26.877, -52.404],
-  'sombrio': [-29.112, -49.615],
-  'laguna': [-28.481, -48.777],
-  'imbituba': [-28.232, -48.670],
-  'tijucas': [-27.241, -48.633]
+const FLORIPA_POLYGONS = {
+  'Norte da Ilha': [[-27.39, -48.41], [-27.41, -48.37], [-27.44, -48.38], [-27.48, -48.40], [-27.49, -48.45], [-27.48, -48.50], [-27.45, -48.53], [-27.42, -48.50]],
+  'Leste da Ilha': [[-27.48, -48.40], [-27.53, -48.42], [-27.57, -48.43], [-27.62, -48.48], [-27.60, -48.50], [-27.55, -48.47], [-27.49, -48.45]],
+  'Centro': [[-27.49, -48.45], [-27.55, -48.47], [-27.60, -48.50], [-27.62, -48.53], [-27.60, -48.56], [-27.55, -48.55], [-27.51, -48.52], [-27.48, -48.50]],
+  'Sul da Ilha': [[-27.62, -48.48], [-27.68, -48.49], [-27.74, -48.51], [-27.78, -48.55], [-27.72, -48.57], [-27.65, -48.56], [-27.62, -48.53], [-27.60, -48.50]],
+  'Continente': [[-27.57, -48.57], [-27.59, -48.56], [-27.61, -48.57], [-27.62, -48.59], [-27.60, -48.61], [-27.57, -48.60]]
 };
 
 const MOCK_DATA = [
@@ -104,34 +54,62 @@ const toProperCase = (str) => {
 };
 
 const FLORIPA_GEO = [
-  { k: 'centro', b: 'Centro', d: 'Sede', r: 'Centro' }, { k: 'alesc', b: 'Centro', d: 'Sede', r: 'Centro' },
-  { k: 'osni regis', b: 'Centro', d: 'Sede', r: 'Centro' }, { k: 'alfandega', b: 'Centro', d: 'Sede', r: 'Centro' },
-  { k: 'ufsc', b: 'Trindade', d: 'Sede', r: 'Centro' }, { k: 'udesc', b: 'Itacorubi', d: 'Sede', r: 'Centro' },
-  { k: 'agronomica', b: 'Agronômica', d: 'Sede', r: 'Centro' }, { k: 'trindade', b: 'Trindade', d: 'Sede', r: 'Centro' },
-  { k: 'carvoeira', b: 'Carvoeira', d: 'Sede', r: 'Centro' }, { k: 'saco dos limoes', b: 'Saco dos Limões', d: 'Sede', r: 'Centro' },
-  { k: 'pantanal', b: 'Pantanal', d: 'Sede', r: 'Centro' }, { k: 'itacorubi', b: 'Itacorubi', d: 'Sede', r: 'Centro' },
-  { k: 'santa monica', b: 'Santa Mônica', d: 'Sede', r: 'Centro' }, { k: 'corrego grande', b: 'Córrego Grande', d: 'Sede', r: 'Centro' },
-  { k: 'joao paulo', b: 'João Paulo', d: 'Sede', r: 'Centro' }, { k: 'saco grande', b: 'Saco Grande', d: 'Sede', r: 'Centro' },
-  { k: 'monte verde', b: 'Monte Verde', d: 'Sede', r: 'Centro' }, { k: 'costeira', b: 'Costeira do Pirajubaé', d: 'Sede', r: 'Centro' },
-  { k: 'jose mendes', b: 'José Mendes', d: 'Sede', r: 'Centro' }, { k: 'estreito', b: 'Estreito', d: 'Continente', r: 'Continente' },
-  { k: 'coqueiros', b: 'Coqueiros', d: 'Continente', r: 'Continente' }, { k: 'capoeiras', b: 'Capoeiras', d: 'Continente', r: 'Continente' },
-  { k: 'abraao', b: 'Abraão', d: 'Continente', r: 'Continente' }, { k: 'bom abrigo', b: 'Bom Abrigo', d: 'Continente', r: 'Continente' },
-  { k: 'itaguacu', b: 'Itaguaçu', d: 'Continente', r: 'Continente' }, { k: 'jardim atlantico', b: 'Jardim Atlântico', d: 'Continente', r: 'Continente' },
-  { k: 'monte cristo', b: 'Monte Cristo', d: 'Continente', r: 'Continente' }, { k: 'balneario', b: 'Balneário', d: 'Continente', r: 'Continente' },
-  { k: 'lagoa da conceicao', b: 'Lagoa da Conceição', d: 'Lagoa da Conceição', r: 'Leste da Ilha' }, { k: 'barra da lagoa', b: 'Barra da Lagoa', d: 'Barra da Lagoa', r: 'Leste da Ilha' },
-  { k: 'rio vermelho', b: 'Rio Vermelho', d: 'São João do Rio Vermelho', r: 'Leste da Ilha' }, { k: 'costa da lagoa', b: 'Costa da Lagoa', d: 'Lagoa da Conceição', r: 'Leste da Ilha' },
-  { k: 'mocambique', b: 'Moçambique', d: 'São João do Rio Vermelho', r: 'Leste da Ilha' }, { k: 'canasvieiras', b: 'Canasvieiras', d: 'Canasvieiras', r: 'Norte da Ilha' },
-  { k: 'ingleses', b: 'Ingleses', d: 'Ingleses do Rio Vermelho', r: 'Norte da Ilha' }, { k: 'jurere', b: 'Jurerê', d: 'Jurerê', r: 'Norte da Ilha' },
-  { k: 'santo antonio', b: 'Santo Antônio de Lisboa', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' }, { k: 'sambaqui', b: 'Sambaqui', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' },
-  { k: 'cacupe', b: 'Cacupé', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' }, { k: 'ratones', b: 'Ratones', d: 'Ratones', r: 'Norte da Ilha' },
-  { k: 'vargem pequena', b: 'Vargem Pequena', d: 'Canasvieiras', r: 'Norte da Ilha' }, { k: 'vargem grande', b: 'Vargem Grande', d: 'Canasvieiras', r: 'Norte da Ilha' },
-  { k: 'vargem', b: 'Vargem', d: 'Canasvieiras', r: 'Norte da Ilha' }, { k: 'ponta das canas', b: 'Ponta das Canas', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
-  { k: 'cachoeira', b: 'Cachoeira do Bom Jesus', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' }, { k: 'praia brava', b: 'Praia Brava', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
-  { k: 'daniela', b: 'Daniela', d: 'Jurerê', r: 'Norte da Ilha' }, { k: 'campeche', b: 'Campeche', d: 'Campeche', r: 'Sul da Ilha' },
-  { k: 'ribeirao', b: 'Ribeirão da Ilha', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' }, { k: 'tapera', b: 'Tapera', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
-  { k: 'armacao', b: 'Armação', d: 'Pântano do Sul', r: 'Sul da Ilha' }, { k: 'pantano', b: 'Pântano do Sul', d: 'Pântano do Sul', r: 'Sul da Ilha' },
-  { k: 'morro das pedras', b: 'Morro das Pedras', d: 'Campeche', r: 'Sul da Ilha' }, { k: 'carianos', b: 'Carianos', d: 'Sede', r: 'Sul da Ilha' },
-  { k: 'caieira', b: 'Caieira', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' }, { k: 'solidao', b: 'Solidão', d: 'Pântano do Sul', r: 'Sul da Ilha' },
+  { k: 'centro', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'alesc', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'osni regis', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'alfandega', b: 'Centro', d: 'Sede', r: 'Centro' },
+  { k: 'ufsc', b: 'Trindade', d: 'Sede', r: 'Centro' },
+  { k: 'udesc', b: 'Itacorubi', d: 'Sede', r: 'Centro' },
+  { k: 'agronomica', b: 'Agronômica', d: 'Sede', r: 'Centro' },
+  { k: 'trindade', b: 'Trindade', d: 'Sede', r: 'Centro' },
+  { k: 'carvoeira', b: 'Carvoeira', d: 'Sede', r: 'Centro' },
+  { k: 'saco dos limoes', b: 'Saco dos Limões', d: 'Sede', r: 'Centro' },
+  { k: 'pantanal', b: 'Pantanal', d: 'Sede', r: 'Centro' },
+  { k: 'itacorubi', b: 'Itacorubi', d: 'Sede', r: 'Centro' },
+  { k: 'santa monica', b: 'Santa Mônica', d: 'Sede', r: 'Centro' },
+  { k: 'corrego grande', b: 'Córrego Grande', d: 'Sede', r: 'Centro' },
+  { k: 'joao paulo', b: 'João Paulo', d: 'Sede', r: 'Centro' },
+  { k: 'saco grande', b: 'Saco Grande', d: 'Sede', r: 'Centro' },
+  { k: 'monte verde', b: 'Monte Verde', d: 'Sede', r: 'Centro' },
+  { k: 'costeira', b: 'Costeira do Pirajubaé', d: 'Sede', r: 'Centro' },
+  { k: 'jose mendes', b: 'José Mendes', d: 'Sede', r: 'Centro' },
+  { k: 'estreito', b: 'Estreito', d: 'Continente', r: 'Continente' },
+  { k: 'coqueiros', b: 'Coqueiros', d: 'Continente', r: 'Continente' },
+  { k: 'capoeiras', b: 'Capoeiras', d: 'Continente', r: 'Continente' },
+  { k: 'abraao', b: 'Abraão', d: 'Continente', r: 'Continente' },
+  { k: 'bom abrigo', b: 'Bom Abrigo', d: 'Continente', r: 'Continente' },
+  { k: 'itaguacu', b: 'Itaguaçu', d: 'Continente', r: 'Continente' },
+  { k: 'jardim atlantico', b: 'Jardim Atlântico', d: 'Continente', r: 'Continente' },
+  { k: 'monte cristo', b: 'Monte Cristo', d: 'Continente', r: 'Continente' },
+  { k: 'balneario', b: 'Balneário', d: 'Continente', r: 'Continente' },
+  { k: 'lagoa da conceicao', b: 'Lagoa da Conceição', d: 'Lagoa da Conceição', r: 'Leste da Ilha' },
+  { k: 'barra da lagoa', b: 'Barra da Lagoa', d: 'Barra da Lagoa', r: 'Leste da Ilha' },
+  { k: 'rio vermelho', b: 'Rio Vermelho', d: 'São João do Rio Vermelho', r: 'Leste da Ilha' },
+  { k: 'costa da lagoa', b: 'Costa da Lagoa', d: 'Lagoa da Conceição', r: 'Leste da Ilha' },
+  { k: 'mocambique', b: 'Moçambique', d: 'São João do Rio Vermelho', r: 'Leste da Ilha' },
+  { k: 'canasvieiras', b: 'Canasvieiras', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'ingleses', b: 'Ingleses', d: 'Ingleses do Rio Vermelho', r: 'Norte da Ilha' },
+  { k: 'jurere', b: 'Jurerê', d: 'Jurerê', r: 'Norte da Ilha' },
+  { k: 'santo antonio', b: 'Santo Antônio de Lisboa', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' },
+  { k: 'sambaqui', b: 'Sambaqui', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' },
+  { k: 'cacupe', b: 'Cacupé', d: 'Santo Antônio de Lisboa', r: 'Norte da Ilha' },
+  { k: 'ratones', b: 'Ratones', d: 'Ratones', r: 'Norte da Ilha' },
+  { k: 'vargem pequena', b: 'Vargem Pequena', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'vargem grande', b: 'Vargem Grande', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'vargem', b: 'Vargem', d: 'Canasvieiras', r: 'Norte da Ilha' },
+  { k: 'ponta das canas', b: 'Ponta das Canas', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
+  { k: 'cachoeira', b: 'Cachoeira do Bom Jesus', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
+  { k: 'praia brava', b: 'Praia Brava', d: 'Cachoeira do Bom Jesus', r: 'Norte da Ilha' },
+  { k: 'daniela', b: 'Daniela', d: 'Jurerê', r: 'Norte da Ilha' },
+  { k: 'campeche', b: 'Campeche', d: 'Campeche', r: 'Sul da Ilha' },
+  { k: 'ribeirao', b: 'Ribeirão da Ilha', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
+  { k: 'tapera', b: 'Tapera', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
+  { k: 'armacao', b: 'Armação', d: 'Pântano do Sul', r: 'Sul da Ilha' },
+  { k: 'pantano', b: 'Pântano do Sul', d: 'Pântano do Sul', r: 'Sul da Ilha' },
+  { k: 'morro das pedras', b: 'Morro das Pedras', d: 'Campeche', r: 'Sul da Ilha' },
+  { k: 'carianos', b: 'Carianos', d: 'Sede', r: 'Sul da Ilha' },
+  { k: 'caieira', b: 'Caieira', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' },
+  { k: 'solidao', b: 'Solidão', d: 'Pântano do Sul', r: 'Sul da Ilha' },
   { k: 'naufragados', b: 'Naufragados', d: 'Ribeirão da Ilha', r: 'Sul da Ilha' }
 ];
 
@@ -155,7 +133,6 @@ const normalizeData = (data) => {
     keys.forEach(k => {
       if (k === 'id') return;
       const normK = normalizerFilter(k);
-      
       if (normK.includes('titulo')) newItem['Título'] = item[k];
       if (normK.includes('inicio')) newItem['Início'] = item[k];
       if (normK.includes('fim')) newItem['Fim'] = item[k];
@@ -163,12 +140,15 @@ const normalizeData = (data) => {
       if (normK.includes('duracao')) newItem['Duração'] = item[k];
       if (normK.includes('local')) newItem['Local'] = item[k];
       
-      // Classes
-      if (normK === 'classe de atividade' || normK === 'classe') {
+      // Correção e formatação específica para a Classe de Atividade ("Plenária")
+      if (normK === 'classe' || normK.includes('atividade')) {
         let v = item[k];
         if (typeof v === 'string') {
             let properV = toProperCase(v);
-            if (normalizerFilter(v).includes('plenaria')) properV = properV.replace(/Plenaria/ig, 'Plenária');
+            // Corrige "Plenaria" incondicionalmente, mantendo todo o resto original
+            if (normalizerFilter(v).includes('plenaria')) {
+                properV = properV.replace(/Plenaria/ig, 'Plenária');
+            }
             newItem['Classe de Atividade'] = properV;
         } else {
             newItem['Classe de Atividade'] = v;
@@ -178,15 +158,16 @@ const normalizeData = (data) => {
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
       
-      // Articulador Restrito OBRIGATORIAMENTE à coluna chamada "ARTICULADOR" (Coluna H)
+      // Restringe rigidamente a captura de Articuladores à coluna exata (Coluna H)
       if (normK === 'articulador') newItem['Articulador'] = toProperCase(item[k]);
+      
       if (normK === 'status') newItem['STATUS'] = item[k];
       
       // Capturando os níveis de importancia ou prioridade (Coluna L)
       if (normK === 'prioridade' || normK === 'importancia') newItem['Prioridade'] = item[k];
     });
 
-    // Correção super agressiva para "Plenária" (Força a Classe de Atividade se 'plenaria' estiver no Título)
+    // Correção super agressiva para "Plenária" no Título (Força a Classe de Atividade)
     if (newItem['Título'] && normalizerFilter(newItem['Título']).includes('plenaria')) {
         newItem['Classe de Atividade'] = 'Plenária';
     }
@@ -338,167 +319,126 @@ const SimplePieChart = ({ data, title }) => {
   );
 };
 
-const SimpleLineChart = ({ data, title }) => {
-  if (!data || data.length === 0) {
-     return (
-       <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center justify-center min-h-[300px]">
-          <h3 className="text-[12px] font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
-          <span className="text-[10px] font-black text-[#111111] opacity-50 uppercase">Sem dados</span>
-       </div>
-     )
-  }
-
-  const maxVal = Math.max(...data.map(d => d.value), 4);
-  const width = 800;
-  const height = 250;
-  const padding = 40;
-
-  const points = data.map((d, i) => {
-    const x = padding + (i * (width - 2 * padding) / Math.max(data.length - 1, 1));
-    const y = height - padding - ((d.value / maxVal) * (height - 2 * padding));
-    return { x, y, value: d.value, name: d.name };
-  });
-
-  return (
-    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col w-full overflow-x-auto min-h-[350px]">
-      <h3 className="text-[12px] font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 min-w-[600px]">{title}</h3>
-      <div className="flex-1 w-full min-w-[600px]">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full drop-shadow-[4px_4px_0px_#111111]">
-          {/* Eixos horizontais tracejados */}
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-             <line key={i} x1={padding} y1={height - padding - (ratio * (height - 2 * padding))} x2={width - padding} y2={height - padding - (ratio * (height - 2 * padding))} stroke="#cccccc" strokeWidth="1" strokeDasharray="4 4" />
-          ))}
-          
-          {/* Linha principal SVG */}
-          <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#111111" strokeWidth="6" strokeLinejoin="round" />
-          <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#C1272D" strokeWidth="4" strokeLinejoin="round" />
-          
-          {/* Marcadores e Textos */}
-          {points.map((p, i) => (
-            <g key={i}>
-              <rect x={p.x - 6} y={p.y - 6} width="12" height="12" fill="#Fdfcf0" stroke="#111111" strokeWidth="3" />
-              <text x={p.x} y={p.y - 15} textAnchor="middle" fontSize="12" fontWeight="900" fill="#111111">{p.value}</text>
-              <text x={p.x} y={height - 15} textAnchor="middle" fontSize="10" fontWeight="900" fill="#111111">{p.name}</text>
-            </g>
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-};
-
-const GoogleStyleMarkerMap = ({ events, title, isFloripa }) => {
+const ChoroplethMap = ({ data, title, isFloripa }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const geoJsonLayerRef = useRef(null);
+
+  const getMapColor = (value, maxVal) => {
+    if (!value || value === 0) return 'transparent';
+    const intensity = value / maxVal;
+    if (intensity > 0.6) return COLORS.crimson;
+    if (intensity > 0.3) return COLORS.mustard;
+    return COLORS.teal;
+  };
 
   useEffect(() => {
     let isMounted = true;
     let loadingTimer;
 
-    const initMap = () => {
+    const initMap = async () => {
       if (!mapRef.current || !window.L || !isMounted) return;
       if (!mapInstanceRef.current) {
         const mapCenter = isFloripa ? [-27.55, -48.50] : [-27.2730, -50.4906];
-        const mapZoom = isFloripa ? 11 : 7;
+        const mapZoom = isFloripa ? 10 : 6;
         mapInstanceRef.current = window.L.map(mapRef.current, { scrollWheelZoom: false }).setView(mapCenter, mapZoom);
-        
-        // Uso de tiles estéticos do Google Maps sem restrição de API Key
-        window.L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
-          attribution: '&copy; Google Maps' 
-        }).addTo(mapInstanceRef.current);
+        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(mapInstanceRef.current);
       }
       const map = mapInstanceRef.current;
+      const maxVal = Math.max(...data.map(d => d.value), 1);
 
       if (geoJsonLayerRef.current) map.removeLayer(geoJsonLayerRef.current);
       geoJsonLayerRef.current = window.L.layerGroup().addTo(map);
 
-      events.forEach(ev => {
-         let loc = null;
-         const searchString = normalizerFilter(`${ev['Local']} ${ev['Bairro']} ${ev['Município']}`);
-         
-         // 1. Tenta achar bairros se for Floripa
-         if (isFloripa) {
-             const bairroMatch = Object.keys(GEO_COORDS).find(k => searchString.includes(k));
-             if (bairroMatch) loc = GEO_COORDS[bairroMatch];
-         }
-         // 2. Fallback para Município (Centro)
-         if (!loc) {
-            const munMatch = normalizerFilter(ev['Município']);
-            if (GEO_COORDS[munMatch]) loc = GEO_COORDS[munMatch];
-         }
-
-         if (loc) {
-            // Aplica um pequeno "jitter" (tremor espacial) para as agendas não ficarem invisíveis umas sobre as outras
-            const jitter = isFloripa ? 0.015 : 0.05;
-            const finalCoords = [
-              loc[0] + (Math.random() - 0.5) * jitter,
-              loc[1] + (Math.random() - 0.5) * jitter
-            ];
-
-            const prioRaw = normalizerFilter(ev['Prioridade'] || '');
-            let prioColor = '#007D8A'; // Normal / Baixa
-            if (prioRaw.includes('alta') || prioRaw === '1') prioColor = '#C1272D';
-            else if (prioRaw.includes('media') || prioRaw === '2') prioColor = '#EAA221';
-
-            // Marcador Mondrian Personalizado (Losango)
-            const iconHtml = `<div style="width: 14px; height: 14px; background-color: ${prioColor}; border: 3px solid #111111; box-shadow: 2px 2px 0px 0px #111111; transform: rotate(45deg);"></div>`;
-            const customIcon = window.L.divIcon({
-              className: 'custom-mondrian-marker',
-              html: iconHtml,
-              iconSize: [20, 20],
-              iconAnchor: [10, 10],
-              popupAnchor: [0, -10]
-            });
-
-            const marker = window.L.marker(finalCoords, { icon: customIcon });
-            marker.bindPopup(`
-              <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111; min-width: 150px; padding: 4px;">
-                <div style="font-size: 8px; color: #ffffff; background: #111111; padding: 2px 4px; display: inline-block; margin-bottom: 6px; border: 1px solid #111111;">${ev['Classe de Atividade'] || 'SEM CLASSE'}</div>
-                <div style="font-size: 11px; margin-bottom: 6px; line-height: 1.2;">${ev['Título']}</div>
-                <div style="color: #C1272D; font-size: 9px; margin-bottom: 2px;">📍 ${ev['Local'] || ev['Município']}</div>
-                <div style="color: #007D8A; font-size: 9px;">🕒 ${formatDate(ev['Início'])}</div>
+      if (!isFloripa) {
+        try {
+          const res = await fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json');
+          const geoData = await res.json();
+          if (!isMounted) return;
+          const geoLayer = window.L.geoJSON(geoData, {
+            style: (feature) => {
+              const munName = normalizerFilter(feature.properties.name);
+              const found = data.find(d => normalizerFilter(d.name) === munName);
+              const val = found ? found.value : 0;
+              return { fillColor: getMapColor(val, maxVal), weight: val > 0 ? 2 : 1, opacity: 1, color: val > 0 ? COLORS.black : '#cccccc', fillOpacity: val > 0 ? 0.9 : 0.1 };
+            },
+            onEachFeature: (feature, layer) => {
+              const munName = normalizerFilter(feature.properties.name);
+              const found = data.find(d => normalizerFilter(d.name) === munName);
+              if (found) {
+                layer.bindTooltip(`
+                  <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
+                    ${feature.properties.name}: <span style="color: #C1272D; font-size: 12px;">${found.value}</span> Agendas
+                  </div>
+                `, { direction: 'top', className: 'custom-leaflet-tooltip' });
+              }
+            }
+          });
+          geoJsonLayerRef.current.addLayer(geoLayer);
+        } catch (e) { console.error("Erro ao carregar GeoJSON", e); }
+      } else {
+        data.forEach(item => {
+          const polygonCoords = FLORIPA_POLYGONS[item.name];
+          if (polygonCoords) {
+            const polygon = window.L.polygon(polygonCoords, { fillColor: getMapColor(item.value, maxVal), weight: 3, color: COLORS.black, fillOpacity: 0.9 });
+            polygon.bindTooltip(`
+              <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111;">
+                ${item.name}: <span style="color: #C1272D; font-size: 12px;">${item.value}</span> Agendas
               </div>
-            `);
-            geoJsonLayerRef.current.addLayer(marker);
-         }
-      });
+            `, { direction: 'center', className: 'custom-leaflet-tooltip' });
+            geoJsonLayerRef.current.addLayer(polygon);
+          }
+        });
+      }
     };
 
     if (!window.L) {
       if (!document.getElementById('leaflet-css')) {
-        const css = document.createElement('link'); css.id = 'leaflet-css'; css.rel = 'stylesheet';
+        const css = document.createElement('link');
+        css.id = 'leaflet-css';
+        css.rel = 'stylesheet';
         css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
         document.head.appendChild(css);
       }
       if (!document.getElementById('leaflet-script')) {
-        const script = document.createElement('script'); script.id = 'leaflet-script';
+        const script = document.createElement('script');
+        script.id = 'leaflet-script';
         script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
         document.head.appendChild(script);
       }
+      
       const checkAndInit = () => {
-        if (window.L) { if (isMounted) initMap(); } 
-        else { loadingTimer = setTimeout(checkAndInit, 100); }
+        if (window.L) {
+           if (isMounted) initMap();
+        } else {
+           loadingTimer = setTimeout(checkAndInit, 100);
+        }
       };
       checkAndInit();
-    } else { initMap(); }
+    } else {
+      initMap();
+    }
 
     return () => { 
       isMounted = false; 
       if (loadingTimer) clearTimeout(loadingTimer);
     };
-  }, [events, isFloripa]);
+  }, [data, isFloripa]);
 
   return (
     <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full relative">
       <h3 className="text-[12px] font-black text-[#111111] mb-2 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2">{title}</h3>
       <div className="flex gap-4 mb-4">
-        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#007D8A] border-[2px] border-[#111111] transform rotate-45 block"></span><span className="text-[8px] font-black uppercase text-[#111111] ml-1">Normal</span></div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#EAA221] border-[2px] border-[#111111] transform rotate-45 block"></span><span className="text-[8px] font-black uppercase text-[#111111] ml-1">Média</span></div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#C1272D] border-[2px] border-[#111111] transform rotate-45 block"></span><span className="text-[8px] font-black uppercase text-[#111111] ml-1">Alta</span></div>
+        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#007D8A] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Baixa</span></div>
+        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#EAA221] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Média</span></div>
+        <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#C1272D] border-2 border-[#111111]"></span><span className="text-[8px] font-black uppercase text-[#111111]">Alta</span></div>
       </div>
-      <div className="w-full h-[400px] border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
-        <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 0 }}></div>
+      <div className="w-full h-96 border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
+        {data.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#111111] opacity-50 uppercase z-10 bg-[#Fdfcf0]">Sem agendas na região</div>
+        ) : (
+          <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 0 }}></div>
+        )}
       </div>
     </div>
   );
@@ -528,9 +468,10 @@ export default function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   
   const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'asc' });
+  
   const [showOnlyImportant, setShowOnlyImportant] = useState(false);
 
-  // Função de reset global via logo superior esquerdo
+  // Função para resetar o App (Ao clicar no título/ícone)
   const resetApp = () => {
     setSearch('');
     setScopeCapital(true);
@@ -657,34 +598,25 @@ export default function App() {
       return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     };
 
-    const statusCounts = {};
-    filteredEvents.forEach(ev => {
-      let val = ev['STATUS'] || 'Pendente';
-      statusCounts[val] = (statusCounts[val] || 0) + 1;
-    });
+    let pastCount = 0; let futureCount = 0;
+    filteredEvents.forEach(ev => isPast(ev['Início']) ? pastCount++ : futureCount++);
+    const temporalStats = [
+      { name: 'Realizadas (Passado)', value: pastCount },
+      { name: 'Futuras (Acontecerão)', value: futureCount }
+    ].filter(s => s.value > 0);
 
-    // Lógica para o gráfico de linha evolutivo temporal (Agrupamento por Ano-Mês)
-    const temporalDataMap = {};
+    const scHeatmap = agg('Município');
+    const floripaHeatmapMap = {};
+    
     filteredEvents.forEach(ev => {
-      if (!ev['Início']) return;
-      const date = new Date(ev['Início']);
-      // Chave em formato sortable YYYY-MM
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      temporalDataMap[key] = (temporalDataMap[key] || 0) + 1;
+      if (normalizerFilter(ev['Município']).includes('florianopolis') || normalizerFilter(ev['Município']).includes('floripa')) {
+        const reg = ev['Região Floripa'] || 'Centro';
+        floripaHeatmapMap[reg] = (floripaHeatmapMap[reg] || 0) + 1;
+      }
     });
-    const temporalLine = Object.entries(temporalDataMap)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([key, value]) => {
-         const [y, m] = key.split('-');
-         return { name: `${m}/${y}`, value };
-      });
+    const floripaHeatmap = Object.entries(floripaHeatmapMap).map(([name, value]) => ({ name, value }));
 
-    return { 
-       classes: agg('Classe de Atividade'), 
-       articuladores: agg('Articulador'), 
-       status: Object.entries(statusCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value),
-       temporalLine
-    };
+    return { classes: agg('Classe de Atividade'), articuladores: agg('Articulador'), temporalStats, scHeatmap, floripaHeatmap };
   }, [filteredEvents]);
 
   const summaryStats = useMemo(() => {
@@ -747,11 +679,11 @@ export default function App() {
         <div className="flex flex-col xl:flex-row gap-4 justify-between items-center">
           <input 
             type="text" placeholder="BUSCAR POR TÍTULO OU LOCAL..." 
-            className="flex-1 w-full max-w-md px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
+            className="flex-1 w-full max-w-lg px-4 py-2 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:border-[#C1272D] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]"
             value={search} onChange={(e) => setSearch(e.target.value)}
           />
           <div className="flex items-center gap-4 flex-wrap w-full xl:w-auto justify-end">
-            <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap items-center">
+            <div className="flex gap-2 bg-[#111111] p-1 border-[3px] border-[#111111] flex-wrap">
               <button 
                 onClick={() => setShowFuture(!showFuture)} 
                 className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showFuture ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`}
@@ -774,7 +706,7 @@ export default function App() {
               
               <div className="w-px h-auto bg-[#333333] mx-1"></div>
               
-              <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Exibir agendas pessoais conjuntas">
+              <button onClick={() => setShowPessoal(!showPessoal)} className={`px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent hover:bg-[#333333]'}`} title="Alternar visibilidade de agendas pessoais">
                  <div className={`w-2.5 h-2.5 flex items-center justify-center text-[8px] border-[2px] ${showPessoal ? 'border-[#111111] bg-[#111111] text-[#111111]' : 'border-[#Fdfcf0] bg-transparent text-transparent'} flex-shrink-0`}>
                     {showPessoal ? '✓' : ''}
                  </div>
@@ -786,7 +718,7 @@ export default function App() {
               <button 
                 onClick={() => setSortConfig(prev => ({ key: 'Início', direction: prev.key === 'Início' && prev.direction === 'asc' ? 'desc' : 'asc' }))} 
                 className="px-3 py-1.5 text-[9px] font-black uppercase border-2 flex items-center gap-2 text-[#Fdfcf0] border-transparent hover:bg-[#333333] transition-colors" 
-                title="Alternar ordem cronológica"
+                title="Alternar ordem de exibição cronológica"
               >
                  ORDEM: {(sortConfig.key === 'Início' && sortConfig.direction === 'desc') ? 'DECRESCENTE ▼' : 'CRESCENTE ▲'}
               </button>
@@ -816,20 +748,14 @@ export default function App() {
           TOTAL EXIBIDO: {filteredEvents.length}
         </span>
       </div>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.articuladores} title="Articuladores" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
-        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.status} title="Status das Agendas" /></div>
+        <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.articuladores} title="Articuladores" /></div>
+        <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.temporalStats} title="Evolução Temporal" /></div>
       </div>
-      
-      <div className="mt-8">
-        <SimpleLineChart data={dashboardStats.temporalLine} title="Evolução Temporal das Agendas" />
-      </div>
-
       <div className="grid grid-cols-1 gap-8 mt-8">
-        <GoogleStyleMarkerMap events={filteredEvents.filter(e => !normalizerFilter(e['Município']).includes('florianopolis') && !normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Santa Catarina" isFloripa={false} />
-        <GoogleStyleMarkerMap events={filteredEvents.filter(e => normalizerFilter(e['Município']).includes('florianopolis') || normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Florianópolis" isFloripa={true} />
+        <ChoroplethMap data={dashboardStats.scHeatmap} title="Calor Geográfico - Santa Catarina" isFloripa={false} />
+        <ChoroplethMap data={dashboardStats.floripaHeatmap} title="Calor Geográfico - Florianópolis" isFloripa={true} />
       </div>
     </div>
   );
@@ -876,12 +802,12 @@ export default function App() {
                   <h3 className="font-black text-lg text-[#111111] leading-tight mb-4 uppercase line-clamp-3">{ev['Título']}</h3>
                   
                   <div className="mt-auto space-y-2 border-t-[3px] border-[#111111] pt-3">
-                    <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#007D8A] border-[2px] border-[#111111] block flex-shrink-0"></span> {formatDate(ev['Início'])}</p>
-                    <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#C1272D] border-[2px] border-[#111111] block flex-shrink-0"></span> {ev['Município']}</p>
+                    <p className="text-[10px] font-black text-[#111111] uppercase flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#007D8A] border-2 border-[#111111] block flex-shrink-0"></span> {formatDate(ev['Início'])}</p>
+                    <p className="text-[10px] font-black text-[#C1272D] uppercase truncate flex items-center gap-2"><span className="w-2.5 h-2.5 bg-[#C1272D] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Município']}</p>
                     
                     {ev['Articulador'] && ev['Articulador'].trim() !== '' && (
                        <p className="text-[10px] font-black text-[#EAA221] uppercase truncate flex items-center gap-2">
-                         <span className="w-2.5 h-2.5 bg-[#EAA221] border-[2px] border-[#111111] block flex-shrink-0"></span> {ev['Articulador']}
+                         <span className="w-2.5 h-2.5 bg-[#EAA221] border-2 border-[#111111] block flex-shrink-0"></span> {ev['Articulador']}
                        </p>
                     )}
                   </div>
@@ -891,7 +817,7 @@ export default function App() {
                         value={prioLevel === 'alta' ? 'Alta' : prioLevel === 'media' ? 'Média' : prioLevel === 'baixa' ? 'Baixa' : 'Nenhuma'} 
                         onChange={(e) => { e.stopPropagation(); handleUpdatePriority(ev.id, e.target.value); }} 
                         onClick={(e) => e.stopPropagation()}
-                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 appearance-none text-center ${prioLevel === 'alta' ? 'bg-[#C1272D] text-[#Fdfcf0]' : prioLevel === 'media' ? 'bg-[#EAA221] text-[#111111]' : prioLevel === 'baixa' ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 ${prioLevel === 'alta' ? 'bg-[#C1272D] text-[#Fdfcf0]' : prioLevel === 'media' ? 'bg-[#EAA221] text-[#111111]' : prioLevel === 'baixa' ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
                     >
                         <option value="Nenhuma">S/ Prioridade</option>
                         <option value="Baixa">Baixa</option>
@@ -902,7 +828,7 @@ export default function App() {
                         value={ev['STATUS'] || 'Pendente'} 
                         onChange={(e) => { e.stopPropagation(); handleUpdateStatus(ev.id, e.target.value); }} 
                         onClick={(e) => e.stopPropagation()}
-                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 appearance-none text-center ${(ev['STATUS'] === 'Confirmado') ? 'bg-[#007D8A] text-[#Fdfcf0]' : (ev['STATUS'] === 'Realizado') ? 'bg-[#EAA221] text-[#111111]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+                        className={`border-[3px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 ${(ev['STATUS'] === 'Confirmado') ? 'bg-[#007D8A] text-[#Fdfcf0]' : (ev['STATUS'] === 'Realizado') ? 'bg-[#EAA221] text-[#111111]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
                     >
                         <option value="Pendente">Pendente</option>
                         <option value="Confirmado">Confirmado</option>
@@ -969,19 +895,17 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#Fdfcf0] font-sans text-[#111111] flex flex-col md:flex-row selection:bg-[#EAA221] selection:text-[#111111]">
       <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-64 flex-shrink-0 flex flex-col z-50 border-r-[6px] border-[#111111]">
-        <div className="p-6 bg-[#C1272D] flex flex-col cursor-pointer hover:bg-[#A31F25] transition-colors border-b-[4px] border-[#111111]" onClick={resetApp} title="Voltar ao início / Limpar filtros">
+        <div className="p-6 border-b-[4px] border-[#Fdfcf0] bg-[#C1272D] flex flex-col cursor-pointer hover:bg-[#A31F25] transition-colors" onClick={resetApp} title="Voltar ao início / Limpar filtros">
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 border-b-[4px] border-[#Fdfcf0] pb-4">
              <img src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png" alt="Icon" className="w-12 h-12 flex-shrink-0 bg-transparent object-contain drop-shadow-[2px_2px_0px_rgba(17,17,17,1)]" />
              <div className="flex flex-col flex-1">
                 <h1 className="text-3xl font-black tracking-tighter text-[#Fdfcf0] m-0 leading-none pb-1">TABULUM</h1>
-                <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest bg-[#111111] px-2 py-1 border-[2px] border-[#Fdfcf0] w-full text-center m-0 leading-none mt-1">GESTÃO DE AGENDAS</p>
+                <p className="text-[9px] text-[#Fdfcf0] font-black uppercase tracking-widest mt-1 bg-[#111111] px-2 py-1 border-[2px] border-[#Fdfcf0] w-full text-center m-0 leading-none">GESTÃO DE AGENDAS</p>
              </div>
           </div>
           
-          <div className="w-full h-[4px] bg-[#Fdfcf0] mt-4 mb-1"></div>
-
-          <div className="mt-5 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2 cursor-default" onClick={(e) => e.stopPropagation()}>
+          <div className="mt-6 bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] shadow-[4px_4px_0px_0px_#111111] flex flex-col gap-2 cursor-default" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-end">
               <span className="text-[9px] font-black uppercase tracking-wider">Agendas Visíveis</span>
               <span className="text-xl font-black text-[#C1272D] leading-none">{summaryStats.total}</span>
@@ -1008,17 +932,17 @@ export default function App() {
           <button onClick={() => setActiveTab('list')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] border-[#111111] shadow-[4px_4px_0px_0px_#EAA221]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}><span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='list' ? '#111111' : '#Fdfcf0'}}></span>AGENDAS</button>
           <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 border-[3px] border-[#Fdfcf0] text-[11px] font-black uppercase transition-all shadow-[4px_4px_0px_0px_#ffffff] hover:-translate-y-1 ${activeTab === 'dashboard' ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#111111] shadow-[4px_4px_0px_0px_#007D8A]' : 'bg-[#111111] hover:bg-[#Fdfcf0] hover:text-[#111111]'}`}><span className="w-2.5 h-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] block" style={{backgroundColor: activeTab==='dashboard' ? '#111111' : '#Fdfcf0'}}></span>DASHBOARD</button>
           
-          <div className="mt-4 pt-4 md:border-t-[3px] md:border-dashed border-[#Fdfcf0]">
+          <div className="mt-4 pt-4 border-t-[3px] border-dashed border-[#Fdfcf0]">
             <button 
               onClick={() => { setActiveTab('list'); setShowOnlyImportant(!showOnlyImportant); setShowFuture(true); setShowPast(false); }} 
-              className={`w-full flex items-center justify-between px-4 py-3 border-[4px] border-[#111111] text-[11px] font-black uppercase transition-all shadow-[6px_6px_0px_0px_#111111] hover:-translate-y-1 ${showOnlyImportant ? 'bg-[#Fdfcf0] text-[#C1272D]' : 'bg-[#C1272D] text-[#Fdfcf0]'}`}
+              className={`w-full flex items-center justify-between px-4 py-3 border-[4px] border-[#111111] text-[11px] font-black uppercase transition-all shadow-[6px_6px_0px_0px_#111111] hover:-translate-y-1 ${showOnlyImportant ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#C1272D] text-[#Fdfcf0]'}`}
               title="Mostrar próximos eventos de alta prioridade"
             >
               <div className="flex items-center gap-3">
-                 <span className={`w-3 h-3 border-[2px] border-[#111111] block ${showOnlyImportant ? 'bg-[#C1272D]' : 'bg-[#EAA221]'}`}></span>
+                 <span className={`w-3 h-3 border-[2px] border-[#111111] block ${showOnlyImportant ? 'bg-[#Fdfcf0]' : 'bg-[#EAA221]'}`}></span>
                  PRIORIDADES
               </div>
-              <span className={`px-2 py-0.5 border-[3px] border-[#111111] text-[12px] shadow-[2px_2px_0px_0px_#111111] ${showOnlyImportant ? 'bg-[#111111] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}>{upcomingImportantCount}</span>
+              <span className="bg-[#Fdfcf0] text-[#111111] px-2 py-0.5 border-[3px] border-[#111111] text-[12px] shadow-[2px_2px_0px_0px_#111111]">{upcomingImportantCount}</span>
             </button>
           </div>
         </div>
@@ -1036,7 +960,7 @@ export default function App() {
       <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative z-0">
         {loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#Fdfcf0] z-10 gap-6">
-            <div className="w-20 h-20 rounded-full border-[8px] border-t-[#C1272D] border-r-[#EAA221] border-b-[#007D8A] border-l-transparent animate-spin"></div>
+            <div className="w-16 h-16 rounded-full border-[8px] border-t-[#C1272D] border-r-[#EAA221] border-b-[#007D8A] border-l-transparent animate-spin"></div>
             <div className="flex flex-col items-center gap-2 text-center">
               <div className="font-black uppercase tracking-widest text-[#111111] text-lg bg-[#ffffff] px-4 py-2 border-[4px] border-[#111111]">Carregando Dados...</div>
               <p className="text-[10px] font-black uppercase text-[#111111] tracking-wider opacity-80">Isto pode levar alguns instantes, aguarde.</p>
@@ -1067,7 +991,7 @@ export default function App() {
                 <select 
                   value={selectedEvent['STATUS'] || 'Pendente'} 
                   onChange={(e) => handleUpdateStatus(selectedEvent.id, e.target.value)} 
-                  className={`flex-1 border-[4px] border-[#111111] font-black text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer appearance-none text-center ${(selectedEvent['STATUS'] === 'Confirmado') ? 'bg-[#007D8A] text-[#Fdfcf0]' : (selectedEvent['STATUS'] === 'Realizado') ? 'bg-[#EAA221] text-[#111111]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
+                  className={`flex-1 border-[4px] border-[#111111] font-black text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer ${(selectedEvent['STATUS'] === 'Confirmado') ? 'bg-[#007D8A] text-[#Fdfcf0]' : (selectedEvent['STATUS'] === 'Realizado') ? 'bg-[#EAA221] text-[#111111]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
                 >
                   <option value="Pendente">Pendente</option>
                   <option value="Confirmado">Confirmado</option>
@@ -1075,9 +999,9 @@ export default function App() {
                 </select>
 
                 <select 
-                  value={(selectedEvent['Prioridade'] === '1' ? 'Alta' : selectedEvent['Prioridade'] === '2' ? 'Média' : selectedEvent['Prioridade'] === '3' ? 'Baixa' : selectedEvent['Prioridade']) || 'Nenhuma'} 
+                  value={selectedEvent['Prioridade'] || selectedEvent['Importância'] || 'Nenhuma'} 
                   onChange={(e) => handleUpdatePriority(selectedEvent.id, e.target.value)} 
-                  className={`flex-1 border-[4px] border-[#111111] font-black text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer appearance-none text-center ${
+                  className={`flex-1 border-[4px] border-[#111111] font-black text-sm uppercase p-3 shadow-[4px_4px_0px_0px_#111111] outline-none cursor-pointer ${
                     (selectedEvent['Prioridade'] === 'Alta' || selectedEvent['Prioridade'] === '1') ? 'bg-[#C1272D] text-[#Fdfcf0]' : 
                     (selectedEvent['Prioridade'] === 'Média' || selectedEvent['Prioridade'] === '2') ? 'bg-[#EAA221] text-[#111111]' : 
                     (selectedEvent['Prioridade'] === 'Baixa' || selectedEvent['Prioridade'] === '3') ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#Fdfcf0] text-[#111111]'}`}
