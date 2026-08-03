@@ -23,7 +23,6 @@ const CHART_PALETTE = [COLORS.crimson, COLORS.mustard, COLORS.teal];
 // DICIONÁRIOS CARTOGRÁFICOS BÁSICOS
 // ==========================================
 const GEO_COORDS = {
-  // Floripa - Bairros Principais (Fallback para precisão interna)
   'centro': [-27.595, -48.548], 'trindade': [-27.583, -48.523], 'itacorubi': [-27.575, -48.508],
   'agronomica': [-27.576, -48.536], 'campeche': [-27.681, -48.497], 'lagoa da conceicao': [-27.603, -48.461],
   'ingleses': [-27.436, -48.397], 'canasvieiras': [-27.428, -48.461], 'jurere': [-27.438, -48.493],
@@ -109,8 +108,8 @@ const normalizeData = (data) => {
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
       
-      // TRAVA DE SEGURANÇA: Só aceita Articulador se ainda estiver vazio, evitando que colunas duplicadas vazias apaguem dados.
-      if (normK.includes('articulador') || normK.includes('responsavel')) {
+      // TRAVA ABSOLUTA: Só puxa dados da coluna exata "ARTICULADOR"
+      if (normK === 'articulador') {
          if (!newItem['Articulador'] || (newItem['Articulador'].toString().trim() === '' && item[k])) {
              newItem['Articulador'] = toProperCase(item[k]);
          }
@@ -236,7 +235,6 @@ const SimplePieChart = ({ data, title }) => {
   return (
     <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center h-full min-h-[300px]">
       <h3 className="text-[12px] font-black text-[#111111] mb-5 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
-      {/* TRAVA CONTRA DIVISÃO POR ZERO (Bugfix que travava a tela) */}
       {(data.length === 0 || total === 0) ? (
          <div className="flex-1 flex items-center justify-center text-[10px] font-black text-[#111111] opacity-50 uppercase py-10">Sem dados válidos</div>
       ) : (
@@ -309,7 +307,7 @@ const SimpleLineChart = ({ data, title }) => {
           {points.map((p, i) => (
             <g key={i}>
               <rect x={p.x - 6} y={p.y - 6} width="12" height="12" fill="#Fdfcf0" stroke="#111111" strokeWidth="3" />
-              {/* Stroke branco (fundo falso) para o texto flutuar acima da linha sem poluição visual */}
+              {/* Texto com fundo branco contornado para não bugar com a linha vermelha */}
               <text x={p.x} y={p.y - 15} textAnchor="middle" fontSize="14" fontWeight="900" stroke="#Fdfcf0" strokeWidth="4" strokeLinejoin="round" fill="none">{p.value}</text>
               <text x={p.x} y={p.y - 15} textAnchor="middle" fontSize="14" fontWeight="900" fill="#111111">{p.value}</text>
               
@@ -335,15 +333,13 @@ const GoogleStyleMarkerMap = ({ events, title, isFloripa, onMarkerClick }) => {
     const initMap = async () => {
       if (!mapRef.current || !window.L || !isMounted) return;
       
-      // DOWNLOAD DINÂMICO DOS 295 MUNICÍPIOS (Sem hardcode)
+      // Busca Inteligente GeoJSON SC 295 Municípios
       if (!isFloripa && !window.SC_GEO_CACHE) {
          try {
              const res = await fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json');
              const geoData = await res.json();
              if (!isMounted) return;
              window.SC_GEO_CACHE = {};
-             
-             // Extrai o centroide matemático de cada município
              geoData.features.forEach(f => {
                 const name = normalizerFilter(f.properties.name);
                 let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
@@ -356,7 +352,7 @@ const GoogleStyleMarkerMap = ({ events, title, isFloripa, onMarkerClick }) => {
                 });
                 window.SC_GEO_CACHE[name] = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
              });
-         } catch(e) { console.warn("Falha ao carregar municípios, usando fallback interno"); }
+         } catch(e) { console.warn("Falha ao carregar municípios"); }
       }
 
       if (!mapInstanceRef.current) {
@@ -416,7 +412,7 @@ const GoogleStyleMarkerMap = ({ events, title, isFloripa, onMarkerClick }) => {
 
             const marker = window.L.marker(finalCoords, { icon: customIcon });
             
-            // Alterado de bindPopup (ao clicar) para bindTooltip (ao passar o mouse)
+            // Hover Tooltip
             marker.bindTooltip(`
               <div style="font-family: inherit; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #111111; min-width: 150px; padding: 4px;">
                 <div style="font-size: 8px; color: #ffffff; background: #111111; padding: 2px 4px; display: inline-block; margin-bottom: 6px; border: 1px solid #111111;">${ev['Classe de Atividade'] || 'SEM CLASSE'}</div>
@@ -426,7 +422,7 @@ const GoogleStyleMarkerMap = ({ events, title, isFloripa, onMarkerClick }) => {
               </div>
             `, { direction: 'top', className: 'custom-leaflet-tooltip' });
             
-            // Adicionado evento de Clique que dispara a função vinda do App.jsx
+            // Clique para voltar e filtrar na lista principal
             marker.on('click', () => {
               if (onMarkerClick) onMarkerClick(ev['Município']);
             });
@@ -468,7 +464,6 @@ const GoogleStyleMarkerMap = ({ events, title, isFloripa, onMarkerClick }) => {
         <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#EAA221] border-[2px] border-[#111111] transform rotate-45 block"></span><span className="text-[8px] font-black uppercase text-[#111111] ml-1">Média</span></div>
         <div className="flex items-center gap-1"><span className="w-3 h-3 bg-[#C1272D] border-[2px] border-[#111111] transform rotate-45 block"></span><span className="text-[8px] font-black uppercase text-[#111111] ml-1">Alta</span></div>
       </div>
-      {/* Aumento radical do quadro do Mapa de 400px para 600px */}
       <div className="w-full h-[600px] border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
         <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 0 }}></div>
       </div>
@@ -502,7 +497,6 @@ export default function App() {
   const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'asc' });
   const [showOnlyImportant, setShowOnlyImportant] = useState(false);
 
-  // Nova função acionada ao clicar em um marcador no Mapa do Dashboard
   const handleMapClick = (municipio) => {
     setSelectedMunicipios([municipio]);
     setScopeCapital(true);
@@ -530,14 +524,31 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!API_URL) setEvents(normalizeData(MOCK_DATA));
-        else {
-          const response = await fetch(API_URL, { redirect: "follow" });
-          const data = JSON.parse(await response.text());
-          setEvents(normalizeData(data));
+        if (!API_URL) throw new Error("Sem API URL, usando mock");
+        
+        // CORREÇÃO: Timeout expandido para 45 segundos devido ao delay natural do Google
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        
+        const response = await fetch(API_URL, { redirect: "follow", signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        const text = await response.text();
+        let data;
+        try { 
+            data = JSON.parse(text); 
+        } catch (e) { 
+            throw new Error("JSON Inválido. Script retornou texto inesperado."); 
         }
-      } catch (error) { setEvents(normalizeData(MOCK_DATA)); } 
-      finally { setLoading(false); }
+        
+        if (!Array.isArray(data)) throw new Error("Dados não são uma array válida.");
+        setEvents(normalizeData(data));
+      } catch (error) { 
+        console.error("Falha ao puxar os dados da planilha. Usando dados locais de teste.", error);
+        setEvents(normalizeData(MOCK_DATA)); 
+      } finally { 
+        setLoading(false); 
+      }
     };
     fetchData();
   }, []);
@@ -640,13 +651,11 @@ export default function App() {
     const temporalDataMap = {};
     filteredEvents.forEach(ev => {
       if (!ev['Início']) return;
-      // Abordagem rígida e à prova de falhas com fuso-horários: recorta estritamente pelo texto
-      const dataStr = ev['Início'].split('T')[0];
-      if (!dataStr) return;
-      
-      const parts = dataStr.split('-');
-      if (parts.length >= 2) {
-         const key = `${parts[0]}-${parts[1]}`;
+      const d = new Date(ev['Início']);
+      if (!isNaN(d)) {
+         const m = String(d.getMonth() + 1).padStart(2, '0');
+         const y = d.getFullYear();
+         const key = `${y}-${m}`;
          temporalDataMap[key] = (temporalDataMap[key] || 0) + 1;
       }
     });
@@ -791,7 +800,7 @@ export default function App() {
         </span>
       </div>
       
-      {/* 1. Bar: Classes, 2. Pie: Classes (Reposicionado), 3. Pie: Articuladores (Reposicionado) */}
+      {/* Pizzas invertidas como solicitado */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1"><SimpleBarChart data={dashboardStats.classes} title="Classes de Atividade" /></div>
         <div className="lg:col-span-1"><SimplePieChart data={dashboardStats.classes} title="Classes (Proporção)" /></div>
@@ -803,7 +812,6 @@ export default function App() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 mt-8">
-        {/* Passando o manipulador de clique para os componentes dos Mapas */}
         <GoogleStyleMarkerMap events={filteredEvents.filter(e => !normalizerFilter(e['Município']).includes('florianopolis') && !normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Santa Catarina" isFloripa={false} onMarkerClick={handleMapClick} />
         <GoogleStyleMarkerMap events={filteredEvents.filter(e => normalizerFilter(e['Município']).includes('florianopolis') || normalizerFilter(e['Município']).includes('floripa'))} title="Mapa de Agendas - Florianópolis" isFloripa={true} onMarkerClick={handleMapClick} />
       </div>
@@ -1012,7 +1020,6 @@ export default function App() {
       <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative z-0">
         {loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#Fdfcf0] z-10 gap-6">
-            {/* NOVO SPINNER 3 CORES */}
             <div className="w-20 h-20 rounded-full border-[8px] border-t-[#C1272D] border-r-[#EAA221] border-b-[#007D8A] border-l-transparent animate-spin"></div>
             <div className="flex flex-col items-center gap-2 text-center">
               <div className="font-black uppercase tracking-widest text-[#111111] text-lg bg-[#ffffff] px-4 py-2 border-[4px] border-[#111111]">Carregando Dados...</div>
