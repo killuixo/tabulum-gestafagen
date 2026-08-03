@@ -94,22 +94,15 @@ const normalizeData = (data) => {
       if (normK.includes('duracao')) newItem['Duração'] = item[k];
       if (normK.includes('local')) newItem['Local'] = item[k];
       
+      // REMOVIDO: Toda e qualquer manipulação arbitrária no frontend. Confia 100% na planilha.
       if (normK === 'classe de atividade' || normK === 'classe') {
-        let v = item[k];
-        if (typeof v === 'string') {
-            let properV = toProperCase(v);
-            if (normalizerFilter(v).includes('plenaria')) properV = properV.replace(/Plenaria/ig, 'Plenária');
-            newItem['Classe de Atividade'] = properV;
-        } else {
-            newItem['Classe de Atividade'] = v;
-        }
+        newItem['Classe de Atividade'] = item[k] ? item[k].toString().trim().toUpperCase() : '';
       }
       
       if (normK === 'municipio') newItem['Município'] = toProperCase(item[k]);
       if (normK === 'regiao') newItem['Região'] = item[k];
       
-      // TRAVA ABSOLUTA: Só puxa dados da coluna exata "ARTICULADOR"
-      if (normK === 'articulador') {
+      if (normK.includes('articulador') || normK.includes('responsavel')) {
          if (!newItem['Articulador'] || (newItem['Articulador'].toString().trim() === '' && item[k])) {
              newItem['Articulador'] = toProperCase(item[k]);
          }
@@ -118,11 +111,6 @@ const normalizeData = (data) => {
       if (normK === 'status') newItem['STATUS'] = item[k];
       if (normK === 'prioridade' || normK === 'importancia') newItem['Prioridade'] = item[k];
     });
-
-    // Correção super absoluta para "Plenária" (Força se 'plenaria' estiver no Título)
-    if (newItem['Título'] && normalizerFilter(newItem['Título']).includes('plenaria')) {
-        newItem['Classe de Atividade'] = 'Plenária';
-    }
 
     Object.keys(newItem).forEach(k => {
       if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) newItem[k] = '';
@@ -526,25 +514,17 @@ export default function App() {
       try {
         if (!API_URL) throw new Error("Sem API URL, usando mock");
         
-        // CORREÇÃO: Timeout expandido para 45 segundos devido ao delay natural do Google
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000);
-        
-        const response = await fetch(API_URL, { redirect: "follow", signal: controller.signal });
-        clearTimeout(timeoutId);
+        // REMOVIDO COMPLETAMENTE O TIMEOUT. A API flui no tempo natural do Google Sheets.
+        const response = await fetch(API_URL, { redirect: "follow" });
         
         const text = await response.text();
         let data;
-        try { 
-            data = JSON.parse(text); 
-        } catch (e) { 
-            throw new Error("JSON Inválido. Script retornou texto inesperado."); 
-        }
+        try { data = JSON.parse(text); } catch (e) { throw new Error("JSON Inválido."); }
         
         if (!Array.isArray(data)) throw new Error("Dados não são uma array válida.");
         setEvents(normalizeData(data));
       } catch (error) { 
-        console.error("Falha ao puxar os dados da planilha. Usando dados locais de teste.", error);
+        console.warn("Falha no fetch ou API vazia. Usando banco de dados local.", error);
         setEvents(normalizeData(MOCK_DATA)); 
       } finally { 
         setLoading(false); 
