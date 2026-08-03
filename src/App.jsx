@@ -526,21 +526,25 @@ export default function App() {
       try {
         if (!API_URL) throw new Error("Sem API URL, usando mock");
         
-        // Timeout robusto para evitar que a tela trave se o Google demorar
+        // Timeout estendido para 45 segundos (Apps Script pode demorar para 'acordar')
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
         
         const response = await fetch(API_URL, { redirect: "follow", signal: controller.signal });
         clearTimeout(timeoutId);
         
         const text = await response.text();
         let data;
-        try { data = JSON.parse(text); } catch (e) { throw new Error("JSON Inválido. Script retornou erro."); }
+        try { 
+            data = JSON.parse(text); 
+        } catch (e) { 
+            throw new Error("O Google retornou texto em vez de JSON. Verifique se a implantação está como 'Qualquer pessoa'."); 
+        }
         
         if (!Array.isArray(data)) throw new Error("Dados não são uma array válida.");
         setEvents(normalizeData(data));
       } catch (error) { 
-        console.warn("Falha no fetch ou API vazia. Usando banco de dados local.", error);
+        console.error("Falha ao puxar os dados da planilha. Usando dados locais de teste.", error);
         setEvents(normalizeData(MOCK_DATA)); 
       } finally { 
         setLoading(false); 
