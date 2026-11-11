@@ -1,101 +1,116 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 // ==========================================
-// CONFIGURAÇÃO DA API E ESTÉTICA MONDRIAN
+// CONFIGURAÇÃO DA API GOOGLE SHEETS
 // ==========================================
 const getApiUrl = () => {
-  try { return import.meta.env.VITE_APPS_SCRIPT_URL || ''; } 
+  try { return import.meta.env.VITE_APPS_SCRIPT_URL || ''; }
   catch (e) { return ''; }
 };
-const API_URL = getApiUrl(); 
-
-const COLORS = {
-  crimson: '#C1272D', 
-  mustard: '#EAA221', 
-  teal: '#007D8A', 
-  black: '#111111', 
-  white: '#Fdfcf0', 
-  pureWhite: '#ffffff',
-  navy: '#1D3557',
-  orange: '#E05A47',
-  purple: '#5E3A87'
-};
-
-// Paleta expandida para gráficos sem perder a identidade Mondrian
-const CHART_PALETTE = [
-  COLORS.crimson,
-  COLORS.teal,
-  COLORS.mustard,
-  COLORS.black,
-  '#2B580C',
-  '#7F2CCB',
-  '#D9534F',
-  '#005066'
-];
+const API_URL = getApiUrl();
 
 // ==========================================
-// BASE OFICIAL DA ABA "APOIO" (56 BAIRROS REPLAN + REGIÕES SC)
+// ÍCONES SVG MINIMALISTAS (PADRÃO TABULUM - EMENDAS)
+// ==========================================
+const Icon = ({ path, className = "w-4 h-4", onClick, size, style }) => (
+  <svg
+    onClick={onClick}
+    style={{ width: size, height: size, ...style }}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {path}
+  </svg>
+);
+
+const SearchIcon = (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
+const MapPinIcon = (p) => <Icon {...p} path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} />;
+const MapIcon = (p) => <Icon {...p} path={<><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></>} />;
+const UserIcon = (p) => <Icon {...p} path={<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />;
+const TagIcon = (p) => <Icon {...p} path={<><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></>} />;
+const CalendarIcon = (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />;
+const ClockIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
+const LayersIcon = (p) => <Icon {...p} path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} />;
+const XIcon = (p) => <Icon {...p} path={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} />;
+const RefreshCwIcon = (p) => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
+const LayoutDashboardIcon = (p) => <Icon {...p} path={<><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></>} />;
+const TableIcon = (p) => <Icon {...p} path={<><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></>} />;
+const ChevronUpIcon = (p) => <Icon {...p} path={<><path d="m18 15-6-6-6 6"/></>} />;
+const ChevronDownIcon = (p) => <Icon {...p} path={<><path d="m6 9 6 6 6-6"/></>} />;
+const GridIcon = (p) => <Icon {...p} path={<><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></>} />;
+const ListIcon = (p) => <Icon {...p} path={<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>} />;
+const DownloadIcon = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
+const PrinterIcon = (p) => <Icon {...p} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></>} />;
+const FilterIcon = (p) => <Icon {...p} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
+const AlertCircleIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></>} />;
+
+// ==========================================
+// DICIONÁRIOS TERRITORIAIS (ABA APOIO: 56 BAIRROS REPLAN + REGIÕES SC)
 // ==========================================
 const FLORIPA_REPLAN = [
-  { b: 'Abraão', r: 'Continental', d: 'Coqueiros', coords: [-27.602, -48.591] },
-  { b: 'Agronômica', r: 'Central', d: 'Sede Insular', coords: [-27.576, -48.536] },
-  { b: 'Alto Ribeirão', r: 'Sul', d: 'Ribeirão da Ilha', coords: [-27.705, -48.525] },
-  { b: 'Armação', r: 'Sul', d: 'Pântano do Sul', coords: [-27.752, -48.504] },
-  { b: 'Balneário', r: 'Continental', d: 'Estreito', coords: [-27.576, -48.582] },
-  { b: 'Barra da Lagoa', r: 'Leste', d: 'Barra da Lagoa', coords: [-27.574, -48.425] },
-  { b: 'Bom Abrigo', r: 'Continental', d: 'Coqueiros', coords: [-27.608, -48.586] },
-  { b: 'Cachoeira do Bom Jesus', r: 'Norte', d: 'Cachoeira do Bom Jesus', coords: [-27.437, -48.436] },
-  { b: 'Cacupé', r: 'Norte', d: 'Santo Antônio de Lisboa', coords: [-27.531, -48.523] },
-  { b: 'Campeche', r: 'Sul', d: 'Campeche', coords: [-27.681, -48.497] },
-  { b: 'Canasvieiras', r: 'Norte', d: 'Canasvieiras', coords: [-27.428, -48.461] },
-  { b: 'Canto', r: 'Continental', d: 'Estreito', coords: [-27.582, -48.579] },
-  { b: 'Capoeiras', r: 'Continental', d: 'Estreito', coords: [-27.595, -48.598] },
-  { b: 'Capoeiras Oeste', r: 'Continental', d: 'Coqueiros', coords: [-27.599, -48.605] },
-  { b: 'Carianos', r: 'Sul', d: 'Campeche', coords: [-27.665, -48.535] },
-  { b: 'Carvoeira', r: 'Central', d: 'Trindade', coords: [-27.604, -48.521] },
-  { b: 'Centro', r: 'Central', d: 'Sede Insular', coords: [-27.595, -48.548] },
-  { b: 'Coloninha', r: 'Continental', d: 'Estreito', coords: [-27.589, -48.592] },
-  { b: 'Coqueiros', r: 'Continental', d: 'Coqueiros', coords: [-27.602, -48.579] },
-  { b: 'Córrego Grande', r: 'Central', d: 'Trindade', coords: [-27.595, -48.508] },
-  { b: 'Costa da Lagoa', r: 'Leste', d: 'Lagoa da Conceição', coords: [-27.561, -48.463] },
-  { b: 'Costeira do Pirajubaé', r: 'Sul', d: 'Saco dos Limões', coords: [-27.632, -48.524] },
-  { b: 'Daniela', r: 'Norte', d: 'Canasvieiras', coords: [-27.452, -48.532] },
-  { b: 'Estreito', r: 'Continental', d: 'Estreito', coords: [-27.585, -48.577] },
-  { b: 'Ingleses', r: 'Norte', d: 'Ingleses', coords: [-27.436, -48.397] },
-  { b: 'Itacorubi', r: 'Central', d: 'Trindade', coords: [-27.575, -48.508] },
-  { b: 'Itaguaçu', r: 'Continental', d: 'Coqueiros', coords: [-27.606, -48.595] },
-  { b: 'Jardim Atlântico', r: 'Continental', d: 'Estreito', coords: [-27.577, -48.598] },
-  { b: 'João Paulo', r: 'Central', d: 'Saco Grande', coords: [-27.561, -48.512] },
-  { b: 'José Mendes', r: 'Central', d: 'Sede Insular', coords: [-27.609, -48.545] },
-  { b: 'Jurerê', r: 'Norte', d: 'Canasvieiras', coords: [-27.438, -48.493] },
-  { b: 'Lagoa da Conceição', r: 'Leste', d: 'Lagoa da Conceição', coords: [-27.603, -48.461] },
-  { b: 'Moçambique', r: 'Norte', d: 'Rio Vermelho', coords: [-27.515, -48.415] },
-  { b: 'Monte Cristo', r: 'Continental', d: 'Estreito', coords: [-27.588, -48.604] },
-  { b: 'Monte Verde', r: 'Central', d: 'Saco Grande', coords: [-27.551, -48.498] },
-  { b: 'Morro das Pedras', r: 'Sul', d: 'Campeche', coords: [-27.716, -48.502] },
-  { b: 'Pantanal', r: 'Central', d: 'Trindade', coords: [-27.602, -48.516] },
-  { b: 'Pântano do Sul', r: 'Sul', d: 'Pântano do Sul', coords: [-27.781, -48.509] },
-  { b: 'Ponta das Canas', r: 'Norte', d: 'Cachoeira do Bom Jesus', coords: [-27.399, -48.431] },
-  { b: 'Praia Brava', r: 'Norte', d: 'Cachoeira do Bom Jesus', coords: [-27.398, -48.414] },
-  { b: 'Praia do Forte', r: 'Norte', d: 'Canasvieiras', coords: [-27.441, -48.519] },
-  { b: 'Ratones', r: 'Norte', d: 'Ratones', coords: [-27.503, -48.484] },
-  { b: 'Ribeirão da Ilha', r: 'Sul', d: 'Ribeirão da Ilha', coords: [-27.721, -48.536] },
-  { b: 'Rio Tavares', r: 'Sul', d: 'Campeche', coords: [-27.652, -48.485] },
-  { b: 'Rio Vermelho', r: 'Norte', d: 'Rio Vermelho', coords: [-27.493, -48.406] },
-  { b: 'Saco dos Limões', r: 'Central', d: 'Saco dos Limões', coords: [-27.608, -48.532] },
-  { b: 'Saco Grande', r: 'Central', d: 'Saco Grande', coords: [-27.545, -48.498] },
-  { b: 'Sambaqui', r: 'Norte', d: 'Santo Antônio de Lisboa', coords: [-27.485, -48.528] },
-  { b: 'Santa Mônica', r: 'Central', d: 'Trindade', coords: [-27.588, -48.513] },
-  { b: 'Santinho', r: 'Norte', d: 'Ingleses', coords: [-27.459, -48.378] },
-  { b: 'Santo Antônio de Lisboa', r: 'Norte', d: 'Santo Antônio de Lisboa', coords: [-27.502, -48.514] },
-  { b: 'Tapera da Base', r: 'Sul', d: 'Tapera da Base', coords: [-27.684, -48.555] },
-  { b: 'Trindade', r: 'Central', d: 'Trindade', coords: [-27.583, -48.523] },
-  { b: 'Vargem do Bom Jesus', r: 'Norte', d: 'Cachoeira do Bom Jesus', coords: [-27.452, -48.445] },
-  { b: 'Vargem Grande', r: 'Norte', d: 'Ratones', coords: [-27.461, -48.465] },
-  { b: 'Vargem Pequena', r: 'Norte', d: 'Canasvieiras', coords: [-27.468, -48.482] }
+  { b: 'Abraão', r: 'Continental', d: 'Coqueiros' },
+  { b: 'Agronômica', r: 'Central', d: 'Sede Insular' },
+  { b: 'Alto Ribeirão', r: 'Sul', d: 'Ribeirão da Ilha' },
+  { b: 'Armação', r: 'Sul', d: 'Pântano do Sul' },
+  { b: 'Balneário', r: 'Continental', d: 'Estreito' },
+  { b: 'Barra da Lagoa', r: 'Leste', d: 'Barra da Lagoa' },
+  { b: 'Bom Abrigo', r: 'Continental', d: 'Coqueiros' },
+  { b: 'Cachoeira do Bom Jesus', r: 'Norte', d: 'Cachoeira do Bom Jesus' },
+  { b: 'Cacupé', r: 'Norte', d: 'Santo Antônio de Lisboa' },
+  { b: 'Campeche', r: 'Sul', d: 'Campeche' },
+  { b: 'Canasvieiras', r: 'Norte', d: 'Canasvieiras' },
+  { b: 'Canto', r: 'Continental', d: 'Estreito' },
+  { b: 'Capoeiras', r: 'Continental', d: 'Estreito' },
+  { b: 'Capoeiras Oeste', r: 'Continental', d: 'Coqueiros' },
+  { b: 'Carianos', r: 'Sul', d: 'Campeche' },
+  { b: 'Carvoeira', r: 'Central', d: 'Trindade' },
+  { b: 'Centro', r: 'Central', d: 'Sede Insular' },
+  { b: 'Coloninha', r: 'Continental', d: 'Estreito' },
+  { b: 'Coqueiros', r: 'Continental', d: 'Coqueiros' },
+  { b: 'Córrego Grande', r: 'Central', d: 'Trindade' },
+  { b: 'Costa da Lagoa', r: 'Leste', d: 'Lagoa da Conceição' },
+  { b: 'Costeira do Pirajubaé', r: 'Sul', d: 'Saco dos Limões' },
+  { b: 'Daniela', r: 'Norte', d: 'Canasvieiras' },
+  { b: 'Estreito', r: 'Continental', d: 'Estreito' },
+  { b: 'Ingleses', r: 'Norte', d: 'Ingleses' },
+  { b: 'Itacorubi', r: 'Central', d: 'Trindade' },
+  { b: 'Itaguaçu', r: 'Continental', d: 'Coqueiros' },
+  { b: 'Jardim Atlântico', r: 'Continental', d: 'Estreito' },
+  { b: 'João Paulo', r: 'Central', d: 'Saco Grande' },
+  { b: 'José Mendes', r: 'Central', d: 'Sede Insular' },
+  { b: 'Jurerê', r: 'Norte', d: 'Canasvieiras' },
+  { b: 'Lagoa da Conceição', r: 'Leste', d: 'Lagoa da Conceição' },
+  { b: 'Moçambique', r: 'Norte', d: 'Rio Vermelho' },
+  { b: 'Monte Cristo', r: 'Continental', d: 'Estreito' },
+  { b: 'Monte Verde', r: 'Central', d: 'Saco Grande' },
+  { b: 'Morro das Pedras', r: 'Sul', d: 'Campeche' },
+  { b: 'Pantanal', r: 'Central', d: 'Trindade' },
+  { b: 'Pântano do Sul', r: 'Sul', d: 'Pântano do Sul' },
+  { b: 'Ponta das Canas', r: 'Norte', d: 'Cachoeira do Bom Jesus' },
+  { b: 'Praia Brava', r: 'Norte', d: 'Cachoeira do Bom Jesus' },
+  { b: 'Praia do Forte', r: 'Norte', d: 'Canasvieiras' },
+  { b: 'Ratones', r: 'Norte', d: 'Ratones' },
+  { b: 'Ribeirão da Ilha', r: 'Sul', d: 'Ribeirão da Ilha' },
+  { b: 'Rio Tavares', r: 'Sul', d: 'Campeche' },
+  { b: 'Rio Vermelho', r: 'Norte', d: 'Rio Vermelho' },
+  { b: 'Saco dos Limões', r: 'Central', d: 'Saco dos Limões' },
+  { b: 'Saco Grande', r: 'Central', d: 'Saco Grande' },
+  { b: 'Sambaqui', r: 'Norte', d: 'Santo Antônio de Lisboa' },
+  { b: 'Santa Mônica', r: 'Central', d: 'Trindade' },
+  { b: 'Santinho', r: 'Norte', d: 'Ingleses' },
+  { b: 'Santo Antônio de Lisboa', r: 'Norte', d: 'Santo Antônio de Lisboa' },
+  { b: 'Tapera da Base', r: 'Sul', d: 'Tapera da Base' },
+  { b: 'Trindade', r: 'Central', d: 'Trindade' },
+  { b: 'Vargem do Bom Jesus', r: 'Norte', d: 'Cachoeira do Bom Jesus' },
+  { b: 'Vargem Grande', r: 'Norte', d: 'Ratones' },
+  { b: 'Vargem Pequena', r: 'Norte', d: 'Canasvieiras' }
 ];
 
-// Atalhos institucionais frequentes em Florianópolis
 const FLORIPA_ALIASES = [
   { match: /(alesc|assembleia legislativa|palacio barriga verde|plenario|plenarinho|gabinete 26|gabinete 026)/, b: 'Centro' },
   { match: /(ufsc|reitoria da ufsc|cse ufsc|centro de cultura e eventos)/, b: 'Trindade' },
@@ -106,134 +121,121 @@ const FLORIPA_ALIASES = [
   { match: /(sintrajusc)/, b: 'Campeche' }
 ];
 
-// Mapeamento Regional de SC (Base Apoio)
 const SC_REGION_MAP = {
-  'florianopolis': 'GRANDE FLORIANÓPOLIS', 'sao jose': 'GRANDE FLORIANÓPOLIS', 'palhoca': 'GRANDE FLORIANÓPOLIS',
-  'biguacu': 'GRANDE FLORIANÓPOLIS', 'santo amaro da imperatriz': 'GRANDE FLORIANÓPOLIS', 'aguas mornas': 'GRANDE FLORIANÓPOLIS',
-  'alfredo wagner': 'GRANDE FLORIANÓPOLIS', 'antonio carlos': 'GRANDE FLORIANÓPOLIS', 'governador celso ramos': 'GRANDE FLORIANÓPOLIS',
-  'garopaba': 'SUL II', 'imbituba': 'SUL II', 'laguna': 'SUL II', 'tubarao': 'SUL II', 'imarui': 'SUL II', 'jaguaruna': 'SUL II', 'capivari de baixo': 'SUL II', 'gravatal': 'SUL II', 'braco do norte': 'SUL II',
-  'criciuma': 'SUL I', 'ararangua': 'SUL I', 'icara': 'SUL I', 'forquilhinha': 'SUL I', 'urussanga': 'SUL I', 'sideropolis': 'SUL I', 'nova veneza': 'SUL I', 'lauro muller': 'SUL I', 'sombrio': 'SUL I', 'jacinto machado': 'SUL I',
-  'joinville': 'NORTE', 'jaragua do sul': 'NORTE', 'sao francisco do sul': 'NORTE', 'itapoa': 'NORTE', 'araquari': 'NORTE', 'guaramirim': 'NORTE', 'barra velha': 'NORTE', 'corupa': 'NORTE', 'schroeder': 'NORTE',
-  'blumenau': 'VALE DO ITAJAÍ', 'gaspar': 'VALE DO ITAJAÍ', 'indaial': 'VALE DO ITAJAÍ', 'timbo': 'VALE DO ITAJAÍ', 'pomerode': 'VALE DO ITAJAÍ', 'brusque': 'VALE DO ITAJAÍ',
-  'itajai': 'LITORAL DO VALE DO ITAJAÍ', 'balneario camboriu': 'LITORAL DO VALE DO ITAJAÍ', 'camboriu': 'LITORAL DO VALE DO ITAJAÍ', 'navegantes': 'LITORAL DO VALE DO ITAJAÍ', 'bombinhas': 'LITORAL DO VALE DO ITAJAÍ', 'porto belo': 'LITORAL DO VALE DO ITAJAÍ', 'itapema': 'LITORAL DO VALE DO ITAJAÍ', 'penha': 'LITORAL DO VALE DO ITAJAÍ',
-  'rio do sul': 'ALTO VALE DO ITAJAÍ', 'ibirama': 'ALTO VALE DO ITAJAÍ', 'presidente getulio': 'ALTO VALE DO ITAJAÍ', 'ituporanga': 'ALTO VALE DO ITAJAÍ', 'agrolandia': 'ALTO VALE DO ITAJAÍ', 'taio': 'ALTO VALE DO ITAJAÍ',
-  'lages': 'SERRANA', 'urubici': 'SERRANA', 'sao joaquim': 'SERRANA', 'bom jardim da serra': 'SERRANA', 'urupema': 'SERRANA', 'curitibanos': 'SERRANA', 'ponte alta': 'SERRANA', 'correia pinto': 'SERRANA', 'otacilio costa': 'SERRANA', 'campo belo do sul': 'SERRANA',
-  'canoinhas': 'PLANALTO NORTE', 'mafra': 'PLANALTO NORTE', 'sao bento do sul': 'PLANALTO NORTE', 'rio negrinho': 'PLANALTO NORTE', 'porto uniao': 'PLANALTO NORTE', 'itaiopolis': 'PLANALTO NORTE', 'papanduva': 'PLANALTO NORTE',
-  'chapeco': 'OESTE I', 'xanxere': 'OESTE I', 'quilombo': 'OESTE I', 'xaxim': 'OESTE I', 'pinhalzinho': 'OESTE I', 'coronel freitas': 'OESTE I',
-  'concordia': 'OESTE II', 'seara': 'OESTE II', 'ipumirim': 'OESTE II',
-  'joacaba': 'MEIO-OESTE I', 'herval d\'oeste': 'MEIO-OESTE I', 'campos novos': 'MEIO-OESTE I',
-  'cacador': 'MEIO-OESTE II', 'videira': 'MEIO-OESTE II', 'fraiburgo': 'MEIO-OESTE II',
-  'sao miguel do oeste': 'EXTREMO-OESTE', 'maravilha': 'EXTREMO-OESTE', 'dionisio cerqueira': 'EXTREMO-OESTE', 'itapiranga': 'EXTREMO-OESTE'
+  'FLORIANOPOLIS': 'GRANDE FLORIANÓPOLIS', 'SAO JOSE': 'GRANDE FLORIANÓPOLIS', 'PALHOCA': 'GRANDE FLORIANÓPOLIS',
+  'BIGUACU': 'GRANDE FLORIANÓPOLIS', 'SANTO AMARO DA IMPERATRIZ': 'GRANDE FLORIANÓPOLIS', 'AGUAS MORNAS': 'GRANDE FLORIANÓPOLIS',
+  'ALFREDO WAGNER': 'GRANDE FLORIANÓPOLIS', 'ANTONIO CARLOS': 'GRANDE FLORIANÓPOLIS', 'GOVERNADOR CELSO RAMOS': 'GRANDE FLORIANÓPOLIS',
+  'GAROPABA': 'SUL II', 'IMBITUBA': 'SUL II', 'LAGUNA': 'SUL II', 'TUBARAO': 'SUL II', 'IMARUI': 'SUL II', 'JAGUARUNA': 'SUL II', 'CAPIVARI DE BAIXO': 'SUL II', 'GRAVATAL': 'SUL II', 'BRACO DO NORTE': 'SUL II',
+  'CRICIUMA': 'SUL I', 'ARARANGUA': 'SUL I', 'ICARA': 'SUL I', 'FORQUILHINHA': 'SUL I', 'URUSSANGA': 'SUL I', 'SIDEROPOLIS': 'SUL I', 'NOVA VENEZA': 'SUL I', 'LAURO MULLER': 'SUL I', 'SOMBRIO': 'SUL I', 'JACINTO MACHADO': 'SUL I',
+  'JOINVILLE': 'NORTE', 'JARAGUA DO SUL': 'NORTE', 'SAO FRANCISCO DO SUL': 'NORTE', 'ITAPOA': 'NORTE', 'ARAQUARI': 'NORTE', 'GUARAMIRIM': 'NORTE', 'BARRA VELHA': 'NORTE', 'CORUPA': 'NORTE', 'SCHROEDER': 'NORTE',
+  'BLUMENAU': 'VALE DO ITAJAÍ', 'GASPAR': 'VALE DO ITAJAÍ', 'INDAIAL': 'VALE DO ITAJAÍ', 'TIMBO': 'VALE DO ITAJAÍ', 'POMERODE': 'VALE DO ITAJAÍ', 'BRUSQUE': 'VALE DO ITAJAÍ',
+  'ITAJAI': 'LITORAL DO VALE DO ITAJAÍ', 'BALNEARIO CAMBORIU': 'LITORAL DO VALE DO ITAJAÍ', 'CAMBORIU': 'LITORAL DO VALE DO ITAJAÍ', 'NAVEGANTES': 'LITORAL DO VALE DO ITAJAÍ', 'BOMBINHAS': 'LITORAL DO VALE DO ITAJAÍ', 'PORTO BELO': 'LITORAL DO VALE DO ITAJAÍ', 'ITAPEMA': 'LITORAL DO VALE DO ITAJAÍ', 'PENHA': 'LITORAL DO VALE DO ITAJAÍ',
+  'RIO DO SUL': 'ALTO VALE DO ITAJAÍ', 'IBIRAMA': 'ALTO VALE DO ITAJAÍ', 'PRESIDENTE GETULIO': 'ALTO VALE DO ITAJAÍ', 'ITUPORANGA': 'ALTO VALE DO ITAJAÍ', 'AGROLANDIA': 'ALTO VALE DO ITAJAÍ', 'TAIO': 'ALTO VALE DO ITAJAÍ',
+  'LAGES': 'SERRANA', 'URUBICI': 'SERRANA', 'SAO JOAQUIM': 'SERRANA', 'BOM JARDIM DA SERRA': 'SERRANA', 'URUPEMA': 'SERRANA', 'CURITIBANOS': 'SERRANA', 'PONTE ALTA': 'SERRANA', 'CORREIA PINTO': 'SERRANA', 'OTACILIO COSTA': 'SERRANA', 'CAMPO BELO DO SUL': 'SERRANA',
+  'CANOINHAS': 'PLANALTO NORTE', 'MAFRA': 'PLANALTO NORTE', 'SAO BENTO DO SUL': 'PLANALTO NORTE', 'RIO NEGRINHO': 'PLANALTO NORTE', 'PORTO UNIAO': 'PLANALTO NORTE', 'ITAIOPOLIS': 'PLANALTO NORTE', 'PAPANDUVA': 'PLANALTO NORTE',
+  'CHAPECO': 'OESTE I', 'XANXERE': 'OESTE I', 'QUILOMBO': 'OESTE I', 'XAXIM': 'OESTE I', 'PINHALZINHO': 'OESTE I', 'CORONEL FREITAS': 'OESTE I',
+  'CONCORDIA': 'OESTE II', 'SEARA': 'OESTE II', 'IPUMIRIM': 'OESTE II',
+  'JOACABA': 'MEIO-OESTE I', 'HERVAL D\'OESTE': 'MEIO-OESTE I', 'CAMPOS NOVOS': 'MEIO-OESTE I',
+  'CACADOR': 'MEIO-OESTE II', 'VIDEIRA': 'MEIO-OESTE II', 'FRAIBURGO': 'MEIO-OESTE II',
+  'SAO MIGUEL DO OESTE': 'EXTREMO-OESTE', 'MARAVILHA': 'EXTREMO-OESTE', 'DIONISIO CERQUEIRA': 'EXTREMO-OESTE', 'ITAPIRANGA': 'EXTREMO-OESTE'
 };
 
 const MOCK_DATA = [
-  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': '2026-11-12', 'Fim': '2026-11-12', 'Descrição': 'Votação ambiental. Assessoria: Carla', 'Duração': 120, 'Local': 'ALESC - Centro, Florianópolis', 'CLASSE DE ATIVIDADE': 'PLENÁRIA', 'MUNICÍPIO': 'Florianópolis', 'ARTICULADOR': 'Carla', 'STATUS': 'Confirmado', 'PRIORIDADE': 'Alta' },
-  { id: 3, 'Título': 'Plenária Agroflorestas', 'Início': '2026-11-15', 'Fim': '2026-11-15', 'Descrição': 'Encontro regional no sul. Assessoria: Laura', 'Duração': 180, 'Local': 'Imbituba, SC', 'CLASSE DE ATIVIDADE': 'PLENÁRIA', 'MUNICÍPIO': 'Imbituba', 'ARTICULADOR': 'Laura', 'STATUS': 'Pendente', 'PRIORIDADE': 'Alta' },
-  { id: 4, 'Título': 'Reunião Conselho do Parque das Dunas', 'Início': '2026-10-20', 'Fim': '2026-10-20', 'Descrição': 'Assessoria: Caio', 'Duração': 90, 'Local': 'Lagoa da Conceição, Florianópolis', 'CLASSE DE ATIVIDADE': 'REUNIÃO', 'MUNICÍPIO': 'Florianópolis', 'ARTICULADOR': 'Caio', 'STATUS': 'Realizado', 'PRIORIDADE': 'Média' },
-  { id: 5, 'Título': 'Audiência Pública Transição Energética', 'Início': '2026-11-22', 'Fim': '2026-11-22', 'Descrição': 'Assessoria: Vina', 'Duração': 240, 'Local': 'Criciúma, SC', 'CLASSE DE ATIVIDADE': 'AUDIÊNCIA PÚBLICA', 'MUNICÍPIO': 'Criciúma', 'ARTICULADOR': 'Vina', 'STATUS': 'Confirmado', 'PRIORIDADE': 'Alta' }
+  { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Centro, Florianópolis', 'Classe de Atividade': 'PLENÁRIA', 'Município': 'Florianópolis', 'Articulador': 'Carla', 'STATUS': 'Confirmado', 'Prioridade': 'Alta' },
+  { id: 3, 'Título': 'Reunião Associação Comunitária', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Pauta de saneamento e agroecologia.', 'Duração': 150, 'Local': 'Imbituba, SC', 'Classe de Atividade': 'REUNIÃO', 'Município': 'Imbituba', 'Articulador': 'Laura', 'STATUS': 'Pendente', 'Prioridade': 'Média' }
 ];
 
 // ==========================================
-// FUNÇÕES UTILITÁRIAS E PARSER DE DATAS (FUSO -03:00 SEGURO)
+// FUNÇÕES UTILITÁRIAS E PARSERS
 // ==========================================
-const normalizerFilter = (str) => {
+function normalizeStr(str) {
   if (!str) return '';
-  return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-};
+  return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+}
 
-const toProperCase = (str) => {
+function normalizerFilter(str) {
+  if (!str) return '';
+  return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function toProperCase(str) {
   if (!str || typeof str !== 'string') return '';
   const lowerExceptions = ['da', 'de', 'do', 'das', 'dos', 'e', 'em'];
   return str.trim().toLowerCase().split(/\s+/).map((w, idx) => {
     if (idx > 0 && lowerExceptions.includes(w)) return w;
     return w.charAt(0).toUpperCase() + w.slice(1);
   }).join(' ');
-};
+}
 
-// Corrige o bug de UTC em strings 'YYYY-MM-DD' ou 'DD/MM/YYYY'
-const parseLocalDate = (dateVal) => {
+function parseLocalDate(dateVal) {
   if (!dateVal) return null;
   if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
-  const s = dateVal.toString().trim();
-  // Formato YYYY-MM-DD puro
+  const s = String(dateVal).trim();
   const isoDayMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (isoDayMatch) {
     return new Date(Number(isoDayMatch[1]), Number(isoDayMatch[2]) - 1, Number(isoDayMatch[3]), 12, 0, 0);
   }
-  // Formato DD/MM/YYYY puro
   const brDayMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (brDayMatch) {
     return new Date(Number(brDayMatch[3]), Number(brDayMatch[2]) - 1, Number(brDayMatch[1]), 12, 0, 0);
   }
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
-};
+}
 
-const formatDate = (dateVal) => {
+function formatDate(dateVal) {
   const d = parseLocalDate(dateVal);
-  if (!d) return 'Data Inválida';
-  const s = dateVal.toString().trim();
+  if (!d) return '-';
+  const s = String(dateVal).trim();
   const hasTime = s.includes(':') && !s.endsWith('00:00:00.000Z');
   if (hasTime) {
     return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
   }
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
-};
+}
 
-const getTodayStart = () => {
+function getTodayStart() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-};
+}
 
-const isFutureOrToday = (dateVal) => {
+function isFuture(dateVal) {
   const d = parseLocalDate(dateVal);
   return d ? d >= getTodayStart() : false;
-};
+}
 
-const isPastEvent = (dateVal) => {
+function isPast(dateVal) {
   const d = parseLocalDate(dateVal);
   return d ? d < getTodayStart() : false;
-};
+}
 
-const stripHtml = (str) => {
+function stripHtml(str) {
   if (!str) return '';
-  return str.toString().replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-};
+  return String(str).replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+}
 
-const enrichFloripaLocation = (evento, isOnline) => {
+function enrichFloripaLocation(evento, isOnline) {
   if (isOnline) {
-    return { bairro: 'Digital / Online', distrito: 'Virtual', regiao: 'Online', coords: null };
+    return { bairro: 'Digital / Online', distrito: 'Virtual', regiao: 'Online' };
   }
   const textToSearch = normalizerFilter([evento['Local'] || '', evento['Título'] || '', evento['Descrição'] || ''].join(' '));
-  
-  // 1. Procura nos 56 bairros REPLAN oficiais (do nome mais específico/longo para o mais curto)
   const sortedReplan = [...FLORIPA_REPLAN].sort((a, b) => b.b.length - a.b.length);
   for (let item of sortedReplan) {
-    const key = normalizerFilter(item.b);
-    if (textToSearch.includes(key)) {
-      return { bairro: item.b, distrito: item.d, regiao: item.r, coords: item.coords };
+    if (textToSearch.includes(normalizerFilter(item.b))) {
+      return { bairro: item.b, distrito: item.d, regiao: item.r };
     }
   }
-  // 2. Procura por pontos institucionais (ALESC, UFSC, UDESC, Gabinete 26, etc.)
   for (let alias of FLORIPA_ALIASES) {
     if (alias.match.test(textToSearch)) {
       const found = FLORIPA_REPLAN.find(r => r.b === alias.b);
-      if (found) return { bairro: found.b, distrito: found.d, regiao: found.r, coords: found.coords };
+      if (found) return { bairro: found.b, distrito: found.d, regiao: found.r };
     }
   }
-  return { bairro: 'Não Especificado', distrito: 'Sede Insular', regiao: 'Central', coords: [-27.595, -48.548] };
-};
+  return { bairro: 'Centro / Não Especificado', distrito: 'Sede Insular', regiao: 'Central' };
+}
 
-const normalizeData = (rawEvents, apoioList = []) => {
-  // Constrói dicionário dinâmico de Regiões SC se a aba Apoio vier da API
-  const dynamicRegionMap = { ...SC_REGION_MAP };
-  apoioList.forEach(row => {
-    if (row['Município'] && row['Região em SC']) {
-      dynamicRegionMap[normalizerFilter(row['Município'])] = row['Região em SC'].toString().trim().toUpperCase();
-    }
-  });
-
-  return rawEvents.map(item => {
+function normalizeData(data) {
+  return data.map(item => {
     const newItem = { id: item.id };
     const keys = Object.keys(item);
     keys.forEach(k => { newItem[k] = item[k]; });
@@ -241,1843 +243,2080 @@ const normalizeData = (rawEvents, apoioList = []) => {
     keys.forEach(k => {
       if (k === 'id') return;
       const normK = normalizerFilter(k);
-      if (normK.includes('titulo')) newItem['Título'] = (item[k] || '').toString().trim();
+      if (normK.includes('titulo')) newItem['Título'] = String(item[k] || '').trim();
       if (normK.includes('inicio')) newItem['Início'] = item[k];
       if (normK.includes('fim')) newItem['Fim'] = item[k];
       if (normK.includes('descri')) newItem['Descrição'] = stripHtml(item[k]);
       if (normK.includes('duracao')) newItem['Duração'] = Number(item[k]) || 0;
-      if (normK.includes('local')) newItem['Local'] = (item[k] || '').toString().trim();
+      if (normK.includes('local')) newItem['Local'] = String(item[k] || '').trim();
       if (normK === 'classe de atividade' || normK === 'classe') {
-        newItem['Classe de Atividade'] = item[k] ? item[k].toString().trim().toUpperCase() : 'SEM CLASSE';
+        newItem['Classe de Atividade'] = item[k] ? String(item[k]).trim().toUpperCase() : 'OUTROS EVENTOS';
       }
-      if (normK === 'municipio') newItem['Município_Original'] = (item[k] || '').toString().trim();
-      if (normK === 'articulador') newItem['Articulador'] = toProperCase((item[k] || '').toString());
-      if (normK.includes('articulador') && normK.includes('input')) {
-        newItem['Articulador Input'] = toProperCase((item[k] || '').toString());
+      if (normK === 'municipio') newItem['Município_Original'] = String(item[k] || '').trim();
+      if (normK === 'regiao') newItem['Região'] = String(item[k] || '').trim();
+      if (normK.includes('articulador') || normK.includes('responsavel')) {
+        if (!newItem['Articulador'] || (String(newItem['Articulador']).trim() === '' && item[k])) {
+          newItem['Articulador'] = toProperCase(String(item[k]));
+        }
       }
-      if (normK === 'status') newItem['STATUS'] = (item[k] || 'Pendente').toString().trim();
-      if (normK === 'prioridade' || normK === 'importancia') newItem['Prioridade'] = (item[k] || '').toString().trim();
+      if (normK === 'status') newItem['STATUS'] = String(item[k] || 'Pendente').trim();
+      if (normK === 'prioridade' || normK === 'importancia') newItem['Prioridade'] = String(item[k] || '').trim();
     });
 
-    // Limpa eventuais erros de fórmula (#REF!, #N/A)
     Object.keys(newItem).forEach(k => {
       if (typeof newItem[k] === 'string' && (newItem[k].includes('#REF!') || newItem[k].includes('#N/A'))) {
         newItem[k] = '';
       }
     });
 
-    // Se houver sobrescrita manual na Coluna K (Articulador Input), ela tem precedência
-    if (newItem['Articulador Input'] && newItem['Articulador Input'].trim() !== '') {
-      newItem['Articulador'] = newItem['Articulador Input'];
-    }
-
-    // Identifica se o evento é Online / Remoto
-    const rawMun = newItem['Município_Original'] || '';
+    const rawMun = newItem['Município_Original'] || newItem['Município'] || '';
     const fullText = normalizerFilter(`${rawMun} ${newItem['Local']} ${newItem['Título']}`);
-    const isOnline = rawMun.toLowerCase().includes('online') || /(meet\.google|zoom\.us|online|on-line|virtual|remoto|live )/.test(fullText);
-    newItem['Modalidade'] = isOnline ? 'ONLINE' : 'PRESENCIAL';
+    const isOnline = rawMun.toLowerCase().includes('online') || /(meet\.google|zoom\.us|online|on-line|virtual|remoto)/.test(fullText);
+    newItem['Modalidade'] = isOnline ? 'Online' : 'Presencial';
 
-    // Limpa sufixo "(Online)" do nome do município para cruzamento territorial limpo
-    const cleanMunRaw = rawMun.replace(/\(online\)/ig, '').trim();
-    newItem['Município'] = cleanMunRaw ? toProperCase(cleanMunRaw) : 'Não Identificado';
+    const cleanMun = rawMun.replace(/\(online\)/ig, '').trim();
+    newItem['Município'] = cleanMun ? toProperCase(cleanMun) : '';
 
-    const normMun = normalizerFilter(newItem['Município']);
-    const isFloripa = normMun === 'florianopolis' || normMun === 'floripa';
+    const normMun = normalizeStr(newItem['Município']);
+    newItem['Região'] = newItem['Região'] || SC_REGION_MAP[normMun] || (newItem['Município'] ? 'OUTRA REGIÃO SC' : '');
 
-    newItem['Região SC'] = dynamicRegionMap[normMun] || (newItem['Município'] === 'Não Identificado' ? 'NÃO IDENTIFICADA' : 'OUTRA REGIÃO SC');
-
+    const isFloripa = normMun.includes('FLORIANOPOLIS') || normMun.includes('FLORIPA');
     if (isFloripa) {
       const floripaGeo = enrichFloripaLocation(newItem, isOnline);
       newItem['Bairro'] = floripaGeo.bairro;
       newItem['Distrito'] = floripaGeo.distrito;
       newItem['Região Floripa'] = floripaGeo.regiao;
-      newItem['_coords'] = floripaGeo.coords;
     } else {
-      newItem['Bairro'] = '-';
-      newItem['Distrito'] = '-';
-      newItem['Região Floripa'] = '-';
-      newItem['_coords'] = null;
+      newItem['Bairro'] = '';
+      newItem['Distrito'] = '';
+      newItem['Região Floripa'] = '';
     }
 
-    // Normaliza Prioridade
     const pNorm = normalizerFilter(newItem['Prioridade']);
-    if (pNorm.includes('alta') || pNorm.includes('urgente') || pNorm === '1') newItem['Prioridade'] = 'Alta';
-    else if (pNorm.includes('media') || pNorm === '2') newItem['Prioridade'] = 'Média';
-    else if (pNorm.includes('baixa') || pNorm === '3') newItem['Prioridade'] = 'Baixa';
-    else newItem['Prioridade'] = 'Sem Prioridade';
+    if (pNorm.includes('alta') || pNorm.includes('urgente') || pNorm.includes('maxima') || pNorm === '1') {
+      newItem['Prioridade'] = 'Alta';
+    } else if (pNorm.includes('media') || pNorm === '2') {
+      newItem['Prioridade'] = 'Média';
+    } else if (pNorm.includes('baixa') || pNorm === '3') {
+      newItem['Prioridade'] = 'Baixa';
+    } else {
+      newItem['Prioridade'] = 'Sem Prioridade';
+    }
 
-    // Chave para deduplicação visual opcional
     const dObj = parseLocalDate(newItem['Início']);
-    const dayStr = dObj ? `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}` : 'sem-data';
-    newItem['_dedupKey'] = `${dayStr}_${normalizerFilter(newItem['Título'])}`;
+    newItem['ANO'] = dObj ? String(dObj.getFullYear()) : '';
+    newItem['MES_ANO'] = dObj ? `${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}` : '';
+    newItem['_SORT_MES'] = dObj ? `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}` : '';
 
     return newItem;
   });
-};
+}
 
-// ==========================================
-// MULTI-SELECT UNIVERSAL COM BUSCA E CONTADOR
-// ==========================================
-const MultiSelect = ({ label, options, countsMap = {}, selected, onChange, placeholder }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [internalSearch, setInternalSearch] = useState('');
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filteredOptions = useMemo(() => {
-    if (!internalSearch) return options;
-    const term = normalizerFilter(internalSearch);
-    return options.filter(opt => normalizerFilter(opt).includes(term));
-  }, [options, internalSearch]);
-
-  const toggleOption = (opt) => {
-    if (selected.includes(opt)) onChange(selected.filter(o => o !== opt));
-    else onChange([...selected, opt]);
-  };
-
-  return (
-    <div className="relative flex-1 min-w-[170px]" ref={dropdownRef}>
-      {label && <span className="block text-[8px] font-black uppercase tracking-wider text-[#111111] mb-1">{label}</span>}
-      <button 
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full text-[#111111] border-[3px] border-[#111111] font-black text-[9px] uppercase px-2.5 py-2 text-left shadow-[3px_3px_0px_0px_#111111] flex justify-between items-center transition-transform hover:-translate-y-0.5 ${selected.length > 0 ? 'bg-[#EAA221]' : 'bg-[#Fdfcf0]'}`}
-      >
-        <span className="truncate pr-1">
-          {selected.length === 0 ? placeholder : selected.length === 1 ? selected[0] : `${selected.length} SELECIONADOS`}
-        </span>
-        <span className="text-[11px] leading-none">{isOpen ? '▲' : '▼'}</span>
-      </button>
-      
-      {isOpen && (
-        <div className="absolute z-50 top-full mt-1 left-0 w-full min-w-[230px] bg-[#ffffff] border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] max-h-72 flex flex-col">
-          <div className="p-2 border-b-[3px] border-[#111111] bg-[#Fdfcf0]">
-            <input
-              type="text"
-              placeholder="FILTRAR OPÇÕES..."
-              value={internalSearch}
-              onChange={(e) => setInternalSearch(e.target.value)}
-              className="w-full px-2 py-1 text-[9px] font-black uppercase bg-[#ffffff] border-[2px] border-[#111111] focus:outline-none"
-            />
-          </div>
-          <div className="flex border-b-[3px] border-[#111111] text-[8px] font-black uppercase">
-            <button
-              type="button"
-              onClick={() => onChange([...filteredOptions])}
-              className="flex-1 py-1.5 px-2 hover:bg-[#007D8A] hover:text-[#Fdfcf0] border-r-[2px] border-[#111111] transition-colors"
-            >
-              Marcar ({filteredOptions.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange([])}
-              className="flex-1 py-1.5 px-2 hover:bg-[#C1272D] hover:text-[#Fdfcf0] transition-colors"
-            >
-              Limpar
-            </button>
-          </div>
-          <div className="overflow-y-auto custom-scrollbar flex-1">
-            {filteredOptions.length === 0 ? (
-              <div className="p-3 text-[9px] font-black uppercase text-center opacity-50">Nenhuma opção</div>
-            ) : (
-              filteredOptions.map((opt, i) => {
-                const isSel = selected.includes(opt);
-                const count = countsMap[opt] || 0;
-                return (
-                  <div 
-                    key={i} 
-                    onClick={() => toggleOption(opt)}
-                    className={`flex items-center justify-between px-3 py-2 border-b-[2px] border-[#111111] cursor-pointer transition-colors ${isSel ? 'bg-[#Fdfcf0]' : 'hover:bg-[#Fdfcf0]'}`}
-                  >
-                    <div className="flex items-center min-w-0 pr-2">
-                      <div className={`w-3 h-3 border-[2px] border-[#111111] mr-2 flex-shrink-0 flex items-center justify-center text-[8px] font-black ${isSel ? 'bg-[#C1272D] text-[#ffffff]' : 'bg-[#Fdfcf0]'}`}>
-                        {isSel ? '✓' : ''}
-                      </div>
-                      <span className="font-black text-[9px] uppercase text-[#111111] truncate">{opt}</span>
-                    </div>
-                    {count > 0 && (
-                      <span className="text-[8px] font-black px-1.5 py-0.5 bg-[#111111] text-[#Fdfcf0] flex-shrink-0">
-                        {count}
-                      </span>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ==========================================
-// COMPONENTES GRÁFICOS INTERATIVOS (CLIQUE PARA FICHAS)
-// ==========================================
-const InteractiveBarChart = ({ data, title, subtitle, onItemClick, metricSuffix = '' }) => {
-  const maxVal = Math.max(...data.map(d => d.value), 1);
-  return (
-    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col h-full min-h-[320px]">
-      <div className="border-b-[3px] border-[#111111] pb-2 mb-4 flex justify-between items-end">
-        <div>
-          <h3 className="text-[12px] font-black text-[#111111] uppercase tracking-widest">{title}</h3>
-          {subtitle && <p className="text-[8px] font-bold uppercase text-[#007D8A] mt-0.5">{subtitle}</p>}
-        </div>
-        <span className="text-[9px] font-black uppercase bg-[#111111] text-[#Fdfcf0] px-2 py-0.5">{data.length} itens</span>
-      </div>
-      <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-[300px]">
-        {data.length === 0 && <div className="text-[10px] font-black text-[#111111] opacity-50 uppercase text-center py-8">Sem dados válidos</div>}
-        {data.map((item, i) => (
-          <div 
-            key={i} 
-            onClick={() => onItemClick && onItemClick(item.name)}
-            className={`flex items-center gap-2 group ${onItemClick ? 'cursor-pointer hover:translate-x-1 transition-transform' : ''}`}
-          >
-            <span className="text-[9px] font-black text-[#111111] w-32 uppercase truncate group-hover:text-[#C1272D] group-hover:underline" title={item.name}>
-              {item.name}
-            </span>
-            <div className="flex-1 h-5 bg-[#Fdfcf0] border-[2px] border-[#111111] overflow-hidden relative">
-              <div 
-                className="h-full border-r-[2px] border-[#111111] transition-all duration-500" 
-                style={{ width: `${Math.max((item.value / maxVal) * 100, 3)}%`, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
-              />
-            </div>
-            <span className="text-[10px] font-black text-[#111111] w-14 text-right">
-              {item.value}{metricSuffix}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const InteractiveDonutChart = ({ data, title, onSliceClick }) => {
-  const topData = useMemo(() => {
-    if (data.length <= 6) return data;
-    const top5 = data.slice(0, 5);
-    const othersVal = data.slice(5).reduce((acc, c) => acc + c.value, 0);
-    return [...top5, { name: 'OUTROS (' + (data.length - 5) + ')', value: othersVal, isOther: true }];
-  }, [data]);
-
-  const total = topData.reduce((acc, curr) => acc + curr.value, 0);
-  let cumulativePercent = 0;
-  const getCoordinatesForPercent = (percent) => [Math.cos(2 * Math.PI * percent), Math.sin(2 * Math.PI * percent)];
-
-  return (
-    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center h-full min-h-[320px]">
-      <h3 className="text-[12px] font-black text-[#111111] mb-4 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
-      {(topData.length === 0 || total === 0) ? (
-        <div className="flex-1 flex items-center justify-center text-[10px] font-black text-[#111111] opacity-50 uppercase py-10">Sem dados válidos</div>
-      ) : (
-        <>
-          <div className="relative w-36 h-36 flex-shrink-0">
-            <svg viewBox="-1.1 -1.1 2.2 2.2" className="transform -rotate-90 w-full h-full drop-shadow-[4px_4px_0px_#111111]">
-              <circle cx="0" cy="0" r="1.05" fill="#111111" />
-              {topData.map((slice, i) => {
-                if (slice.value === 0) return null;
-                const percent = slice.value / total;
-                if (percent >= 0.999) return <circle key={i} cx="0" cy="0" r="1" fill={CHART_PALETTE[i % CHART_PALETTE.length]} stroke="#111111" strokeWidth="0.04" />;
-                const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
-                cumulativePercent += percent;
-                const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
-                const largeArcFlag = percent > 0.5 ? 1 : 0;
-                const pathData = [`M ${startX} ${startY}`, `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`, `L 0 0`].join(' ');
-                return (
-                  <path 
-                    key={i} 
-                    d={pathData} 
-                    fill={CHART_PALETTE[i % CHART_PALETTE.length]} 
-                    stroke="#111111" 
-                    strokeWidth="0.04"
-                    className={onSliceClick && !slice.isOther ? "cursor-pointer hover:opacity-80" : ""}
-                    onClick={() => onSliceClick && !slice.isOther && onSliceClick(slice.name)}
-                  />
-                );
-              })}
-              <circle cx="0" cy="0" r="0.45" fill="#Fdfcf0" stroke="#111111" strokeWidth="0.05" />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[13px] font-black text-[#111111] leading-none">{total}</span>
-              <span className="text-[7px] font-black uppercase text-[#111111]">Total</span>
-            </div>
-          </div>
-          <div className="mt-5 w-full flex flex-wrap gap-1.5 justify-center overflow-y-auto max-h-[120px] custom-scrollbar">
-            {topData.map((item, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onSliceClick && !item.isOther && onSliceClick(item.name)}
-                className="flex items-center gap-1.5 text-[8px] font-black text-[#111111] bg-[#Fdfcf0] border-[2px] border-[#111111] px-2 py-1 shadow-[2px_2px_0px_0px_#111111] uppercase hover:bg-[#EAA221] transition-colors"
-              >
-                <span className="w-2.5 h-2.5 border-[2px] border-[#111111] block" style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }} />
-                {item.name}: {item.value} ({(item.value / total * 100).toFixed(0)}%)
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
-
-const SimpleLineChart = ({ data, title }) => {
-  if (!data || data.length === 0) {
-    return (
-      <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col items-center justify-center min-h-[280px]">
-        <h3 className="text-[12px] font-black text-[#111111] mb-4 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 w-full">{title}</h3>
-        <span className="text-[10px] font-black text-[#111111] opacity-50 uppercase">Sem dados válidos no período</span>
-      </div>
-    );
-  }
-
-  const maxVal = Math.max(...data.map(d => d.value), 4);
-  const width = 1000;
-  const height = 280;
-  const padding = 55;
-
-  const points = data.map((d, i) => {
-    const x = padding + (i * (width - 2 * padding) / Math.max(data.length - 1, 1));
-    const y = height - padding - ((d.value / maxVal) * (height - 2 * padding));
-    return { x, y, value: d.value, hours: d.hours, name: d.name };
-  });
-
-  return (
-    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col w-full overflow-x-auto">
-      <h3 className="text-[12px] font-black text-[#111111] mb-3 uppercase tracking-widest border-b-[3px] border-[#111111] pb-2 min-w-[600px]">{title}</h3>
-      <div className="flex-1 w-full min-w-[600px]">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full drop-shadow-[4px_4px_0px_#111111]">
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-            <line key={i} x1={padding} y1={height - padding - (ratio * (height - 2 * padding))} x2={width - padding} y2={height - padding - (ratio * (height - 2 * padding))} stroke="#cccccc" strokeWidth="1" strokeDasharray="4 4" />
-          ))}
-          <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#111111" strokeWidth="6" strokeLinejoin="round" />
-          <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#C1272D" strokeWidth="4" strokeLinejoin="round" />
-          {points.map((p, i) => (
-            <g key={i}>
-              <rect x={p.x - 6} y={p.y - 6} width="12" height="12" fill="#Fdfcf0" stroke="#111111" strokeWidth="3" />
-              <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="13" fontWeight="900" stroke="#Fdfcf0" strokeWidth="4" strokeLinejoin="round" fill="none">{p.value}</text>
-              <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="13" fontWeight="900" fill="#111111">{p.value}</text>
-              <text x={p.x} y={height - 20} textAnchor="middle" fontSize="11" fontWeight="900" fill="#111111">{p.name}</text>
-            </g>
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-};
-
-// ==========================================
-// MAPA APRIMORADO: COROPLÉTICO SC + CLUSTERS MONDRIAN (SEM JITTER ALEATÓRIO)
-// ==========================================
-const EnhancedTerritorialMap = ({ events, title, isFloripa, onMunicipioClick, onEventClick }) => {
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const layerGroupRef = useRef(null);
-  const [mapMode, setMapMode] = useState('clusters'); // 'clusters' | 'pins'
-
-  useEffect(() => {
-    let isMounted = true;
-    let loadingTimer;
-
-    const initAndRenderMap = async () => {
-      if (!mapRef.current || !window.L || !isMounted) return;
-
-      if (!window.SC_GEOJSON_DATA) {
-        try {
-          const res = await fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json');
-          const geoData = await res.json();
-          if (!isMounted) return;
-          window.SC_GEOJSON_DATA = geoData;
-          window.SC_GEO_CENTROIDS = {};
-          geoData.features.forEach(f => {
-            const name = normalizerFilter(f.properties.name);
-            let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-            const coords = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates.flat(2) : f.geometry.coordinates.flat(1);
-            coords.forEach(([lng, lat]) => {
-              if (lat < minLat) minLat = lat;
-              if (lat > maxLat) maxLat = lat;
-              if (lng < minLng) minLng = lng;
-              if (lng > maxLng) maxLng = lng;
-            });
-            window.SC_GEO_CENTROIDS[name] = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
-          });
-        } catch (e) {
-          console.warn("Falha ao buscar GeoJSON de SC:", e);
-        }
-      }
-
-      if (!mapInstanceRef.current) {
-        const mapCenter = isFloripa ? [-27.595, -48.52] : [-27.273, -50.49];
-        const mapZoom = isFloripa ? 11 : 7;
-        mapInstanceRef.current = window.L.map(mapRef.current, { scrollWheelZoom: false }).setView(mapCenter, mapZoom);
-        window.L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-          attribution: '© Google Maps'
-        }).addTo(mapInstanceRef.current);
-      }
-
-      const map = mapInstanceRef.current;
-      if (layerGroupRef.current) map.removeLayer(layerGroupRef.current);
-      layerGroupRef.current = window.L.layerGroup().addTo(map);
-
-      // Agrupamento por Município (SC) ou Bairro REPLAN (Floripa)
-      const groups = {};
-      const countsByNormMun = {};
-
-      events.forEach(ev => {
-        if (ev['Modalidade'] === 'ONLINE') return; // Não plota agendas remotas no mapa físico
-        const groupKey = isFloripa ? (ev['Bairro'] || 'Centro') : (ev['Município'] || 'Não Identificado');
-        if (groupKey === 'Não Identificado' || groupKey === '-') return;
-
-        const normMun = normalizerFilter(ev['Município']);
-        countsByNormMun[normMun] = (countsByNormMun[normMun] || 0) + 1;
-
-        if (!groups[groupKey]) {
-          let coords = null;
-          if (isFloripa) {
-            const replan = FLORIPA_REPLAN.find(r => r.b === groupKey);
-            coords = replan ? replan.coords : [-27.595, -48.548];
-          } else if (window.SC_GEO_CENTROIDS && window.SC_GEO_CENTROIDS[normMun]) {
-            coords = window.SC_GEO_CENTROIDS[normMun];
-          }
-          groups[groupKey] = { name: groupKey, municipio: ev['Município'], coords, list: [], altaCount: 0, hours: 0 };
-        }
-        groups[groupKey].list.push(ev);
-        groups[groupKey].hours += (Number(ev['Duração']) || 0) / 60;
-        if (ev['Prioridade'] === 'Alta') groups[groupKey].altaCount++;
-      });
-
-      // Camada Coroplética dos 295 municípios de SC
-      if (!isFloripa && window.SC_GEOJSON_DATA) {
-        const geoLayer = window.L.geoJSON(window.SC_GEOJSON_DATA, {
-          style: (feature) => {
-            const normName = normalizerFilter(feature.properties.name);
-            const count = countsByNormMun[normName] || 0;
-            let fillColor = '#Fdfcf0';
-            let fillOpacity = 0.25;
-            if (count >= 15) { fillColor = COLORS.crimson; fillOpacity = 0.65; }
-            else if (count >= 5) { fillColor = COLORS.mustard; fillOpacity = 0.6; }
-            else if (count >= 1) { fillColor = COLORS.teal; fillOpacity = 0.55; }
-            return {
-              color: '#111111',
-              weight: count > 0 ? 2 : 0.8,
-              fillColor,
-              fillOpacity
-            };
-          },
-          onEachFeature: (feature, layer) => {
-            const munName = feature.properties.name;
-            const normName = normalizerFilter(munName);
-            const count = countsByNormMun[normName] || 0;
-            layer.bindTooltip(`
-              <div style="font-weight:900; text-transform:uppercase; font-size:10px;">
-                <div>${munName}</div>
-                <div style="color:${count > 0 ? '#C1272D' : '#666'}">${count} VISITA(S) / AGENDA(S)</div>
-                <div style="font-size:8px; color:#007D8A;">Clique para abrir a Ficha Territorial</div>
-              </div>
-            `, { className: 'custom-leaflet-tooltip' });
-            layer.on('click', () => {
-              if (onMunicipioClick) onMunicipioClick(toProperCase(munName));
-            });
-          }
-        });
-        layerGroupRef.current.addLayer(geoLayer);
-      }
-
-      // Renderiza Clusters Consolidados ou Pinos Determinísticos
-      Object.values(groups).forEach(group => {
-        if (!group.coords) return;
-        const count = group.list.length;
-
-        if (mapMode === 'clusters') {
-          const size = Math.min(24 + Math.sqrt(count) * 6, 52);
-          const bgColor = group.altaCount > 0 ? COLORS.crimson : count >= 5 ? COLORS.mustard : COLORS.teal;
-          const textColor = bgColor === COLORS.mustard ? '#111111' : '#Fdfcf0';
-
-          const html = `
-            <div style="
-              width:${size}px; height:${size}px;
-              background:${bgColor}; color:${textColor};
-              border:3px solid #111111;
-              box-shadow:3px 3px 0px #111111;
-              display:flex; align-items:center; justify-content:center;
-              font-weight:900; font-size:${size > 34 ? 12 : 10}px;
-            ">
-              ${count}
-            </div>
-          `;
-          const icon = window.L.divIcon({
-            className: 'mondrian-cluster-icon',
-            html,
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2]
-          });
-
-          const marker = window.L.marker(group.coords, { icon });
-          marker.bindTooltip(`
-            <div style="font-weight:900; text-transform:uppercase; font-size:10px; min-width:160px;">
-              <div style="background:#111111; color:#Fdfcf0; padding:2px 6px; margin-bottom:4px;">${group.name}</div>
-              <div>📌 <b>${count}</b> agenda(s) presenciais</div>
-              <div>⏱️ <b>${group.hours.toFixed(1)}h</b> dedicadas</div>
-              ${group.altaCount > 0 ? `<div style="color:#C1272D;">🔥 ${group.altaCount} de Alta Prioridade</div>` : ''}
-              <div style="margin-top:4px; font-size:8px; color:#007D8A;">Clique para abrir a Ficha Cruzada</div>
-            </div>
-          `, { direction: 'top', className: 'custom-leaflet-tooltip' });
-
-          marker.on('click', () => {
-            if (onMunicipioClick) onMunicipioClick(group.municipio);
-          });
-          layerGroupRef.current.addLayer(marker);
-        } else {
-          // Modo Pinos Individuais com espiral determinística (nunca usa Math.random)
-          const stepRadius = isFloripa ? 0.0022 : 0.012;
-          group.list.forEach((ev, idx) => {
-            const angle = idx * 1.15;
-            const r = idx === 0 ? 0 : stepRadius * Math.sqrt(idx);
-            const coords = [group.coords[0] + r * Math.cos(angle), group.coords[1] + r * Math.sin(angle)];
-            const prioColor = ev['Prioridade'] === 'Alta' ? COLORS.crimson : ev['Prioridade'] === 'Média' ? COLORS.mustard : COLORS.teal;
-
-            const icon = window.L.divIcon({
-              className: 'custom-mondrian-marker',
-              html: `<div style="width:13px; height:13px; background:${prioColor}; border:2.5px solid #111111; box-shadow:2px 2px 0px #111111; transform:rotate(45deg);"></div>`,
-              iconSize: [16, 16],
-              iconAnchor: [8, 8]
-            });
-
-            const m = window.L.marker(coords, { icon });
-            m.bindTooltip(`
-              <div style="font-weight:900; text-transform:uppercase; font-size:10px;">
-                <div style="background:#111111; color:#Fdfcf0; padding:2px 4px; display:inline-block; margin-bottom:4px; font-size:8px;">${ev['Classe de Atividade']}</div>
-                <div>${ev['Título']}</div>
-                <div style="color:#C1272D; font-size:9px;">📍 ${ev['Município']} ${isFloripa ? `(${ev['Bairro']})` : ''}</div>
-                <div style="color:#007D8A; font-size:9px;">🕒 ${formatDate(ev['Início'])}</div>
-              </div>
-            `, { direction: 'top', className: 'custom-leaflet-tooltip' });
-
-            m.on('click', () => {
-              if (onEventClick) onEventClick(ev);
-            });
-            layerGroupRef.current.addLayer(m);
-          });
-        }
-      });
-    };
-
-    if (!window.L) {
-      if (!document.getElementById('leaflet-css')) {
-        const css = document.createElement('link');
-        css.id = 'leaflet-css'; css.rel = 'stylesheet';
-        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(css);
-      }
-      if (!document.getElementById('leaflet-script')) {
-        const script = document.createElement('script');
-        script.id = 'leaflet-script';
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        document.head.appendChild(script);
-      }
-      const checkAndInit = () => {
-        if (window.L) { if (isMounted) initAndRenderMap(); }
-        else { loadingTimer = setTimeout(checkAndInit, 100); }
-      };
-      checkAndInit();
-    } else {
-      initAndRenderMap();
+function sortEventsList(list, sortConfig) {
+  if (!sortConfig || !sortConfig.key) return list;
+  const sorted = [...list];
+  sorted.sort((a, b) => {
+    if (sortConfig.key === 'Início') {
+      const tA = parseLocalDate(a['Início'])?.getTime() || 0;
+      const tB = parseLocalDate(b['Início'])?.getTime() || 0;
+      return sortConfig.direction === 'asc' ? tA - tB : tB - tA;
     }
+    if (sortConfig.key === 'Duração') {
+      const dA = Number(a['Duração']) || 0;
+      const dB = Number(b['Duração']) || 0;
+      return sortConfig.direction === 'asc' ? dA - dB : dB - dA;
+    }
+    const strA = String(a[sortConfig.key] || '').trim();
+    const strB = String(b[sortConfig.key] || '').trim();
+    if (!strA && strB) return 1;
+    if (strA && !strB) return -1;
+    const cmp = strA.localeCompare(strB, 'pt-BR', { sensitivity: 'base', numeric: true });
+    return sortConfig.direction === 'asc' ? cmp : -cmp;
+  });
+  return sorted;
+}
 
-    return () => {
-      isMounted = false;
-      if (loadingTimer) clearTimeout(loadingTimer);
-    };
-  }, [events, isFloripa, mapMode]);
-
-  return (
-    <div className="bg-[#ffffff] p-5 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] flex flex-col">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-[3px] border-[#111111] pb-3 mb-3 gap-3">
-        <div>
-          <h3 className="text-[12px] font-black text-[#111111] uppercase tracking-widest">{title}</h3>
-          <p className="text-[9px] font-bold uppercase text-[#007D8A]">
-            Clique em um município ou marcador para abrir a Ficha Territorial Cruzada
-          </p>
-        </div>
-        <div className="flex gap-2 bg-[#111111] p-1 border-[2px] border-[#111111]">
-          <button
-            type="button"
-            onClick={() => setMapMode('clusters')}
-            className={`px-3 py-1 text-[9px] font-black uppercase ${mapMode === 'clusters' ? 'bg-[#EAA221] text-[#111111]' : 'text-[#Fdfcf0]'}`}
-          >
-            Clusters (Total por Local)
-          </button>
-          <button
-            type="button"
-            onClick={() => setMapMode('pins')}
-            className={`px-3 py-1 text-[9px] font-black uppercase ${mapMode === 'pins' ? 'bg-[#EAA221] text-[#111111]' : 'text-[#Fdfcf0]'}`}
-          >
-            Pinos Individuais
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-4 mb-3 text-[8px] font-black uppercase">
-        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-[#C1272D] border-[2px] border-[#111111] block" /> Alta Prioridade / 15+ Visitas</div>
-        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-[#EAA221] border-[2px] border-[#111111] block" /> Média / 5–14 Visitas</div>
-        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-[#007D8A] border-[2px] border-[#111111] block" /> Normal / 1–4 Visitas</div>
-      </div>
-
-      <div className="w-full h-[500px] border-[3px] border-[#111111] relative z-0 bg-[#Fdfcf0]">
-        <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 0 }} />
-      </div>
-    </div>
-  );
+// Metadados das dimensões para as Fichas de Cruzamento (igual ao TABULUM - Emendas)
+const ENTITY_TYPE_META = {
+  municipio: { label: 'Município', plural: 'Municípios', field: 'Município' },
+  regiao: { label: 'Região SC', plural: 'Regiões de SC', field: 'Região' },
+  bairro: { label: 'Bairro (Floripa)', plural: 'Bairros (Floripa)', field: 'Bairro' },
+  distrito: { label: 'Distrito (Floripa)', plural: 'Distritos (Floripa)', field: 'Distrito' },
+  classe: { label: 'Classe de Atividade', plural: 'Classes de Atividade', field: 'Classe de Atividade' },
+  articulador: { label: 'Articulador', plural: 'Articuladores', field: 'Articulador' },
+  status: { label: 'Status', plural: 'Status', field: 'STATUS' },
+  prioridade: { label: 'Prioridade', plural: 'Prioridades', field: 'Prioridade' },
+  modalidade: { label: 'Modalidade', plural: 'Modalidades', field: 'Modalidade' },
+  mes_ano: { label: 'Mês/Ano', plural: 'Meses/Anos', field: 'MES_ANO' },
+  ano: { label: 'Ano', plural: 'Anos', field: 'ANO' }
 };
 
-// ==========================================
-// COMPONENTE PRINCIPAL: TABULUM - GesTAgen v2.0
-// ==========================================
 export default function App() {
-  const [activeTab, setActiveTab] = useState('list'); // 'list' | 'dashboard' | 'fichas'
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mapGeoJson, setMapGeoJson] = useState(null);
 
-  // Filtros Universais Superiores (Multi-seleção + Busca Universal)
-  const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [showFuture, setShowFuture] = useState(true);
-  const [showPast, setShowPast] = useState(true);
-  const [showPessoal, setShowPessoal] = useState(false);
-  const [dedupVisual, setDedupVisual] = useState(true); // Remove visualmente as duplicatas da planilha
+  const [currentView, setCurrentView] = useState('list'); // 'list' | 'dashboard' | 'entity' | 'detail'
+  const [viewMode, setViewMode] = useState('table');      // 'table' | 'cards'
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
+  const [selectedEntityFicha, setSelectedEntityFicha] = useState(null);
+  const [entityHistory, setEntityHistory] = useState([]);
+
+  // Paginação exclusiva para o modo Card (5, 25, 50, 100, 200, Todas - padrão 50)
+  const [cardsPerPage, setCardsPerPage] = useState(50);
+  const [currentCardPage, setCurrentCardPage] = useState(1);
+
+  // Controles de Escopo e Tempo (Preservados do GesTAgen original)
+  const [searchTerm, setSearchTerm] = useState('');
   const [scopeCapital, setScopeCapital] = useState(true);
   const [scopeInterior, setScopeInterior] = useState(true);
-  const [selectedModalidades, setSelectedModalidades] = useState([]);
+  const [showFuture, setShowFuture] = useState(true);
+  const [showPast, setShowPast] = useState(false);
+  const [showPessoal, setShowPessoal] = useState(false);
+  const [showOnlyImportant, setShowOnlyImportant] = useState(false);
 
-  const [selectedRegioesSC, setSelectedRegioesSC] = useState([]);
-  const [selectedMunicipios, setSelectedMunicipios] = useState([]);
-  const [selectedBairrosFloripa, setSelectedBairrosFloripa] = useState([]);
-  const [selectedArticuladores, setSelectedArticuladores] = useState([]);
-  const [selectedClasses, setSelectedClasses] = useState([]);
-  const [selectedStatus, setSelectedStatus] = useState([]);
-  const [selectedPrioridades, setSelectedPrioridades] = useState([]);
+  // Filtros Universais de Multiseleção
+  const [filterMunicipios, setFilterMunicipios] = useState([]);
+  const [filterRegioes, setFilterRegioes] = useState([]);
+  const [filterBairros, setFilterBairros] = useState([]);
+  const [filterClasses, setFilterClasses] = useState([]);
+  const [filterArticuladores, setFilterArticuladores] = useState([]);
+  const [filterStatus, setFilterStatus] = useState([]);
+  const [filterPrioridades, setFilterPrioridades] = useState([]);
+  const [filterModalidades, setFilterModalidades] = useState([]);
+  const [filterAnos, setFilterAnos] = useState([]);
 
-  const [viewMode, setViewMode] = useState('cards');
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [fichaModal, setFichaModal] = useState(null); // { type: 'municipio' | 'articulador', name: string }
   const [sortConfig, setSortConfig] = useState({ key: 'Início', direction: 'asc' });
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false);
 
-  // Carregamento inicial + suporte a URL params para Interoperabilidade TABULUM (?municipio=Imbituba)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const munParam = params.get('municipio');
-    if (munParam) {
-      setFichaModal({ type: 'municipio', name: toProperCase(munParam) });
-    }
-
-    const fetchData = async () => {
-      try {
-        if (!API_URL) throw new Error("Sem API URL, usando mock");
-        const sep = API_URL.includes('?') ? '&' : '?';
-        const response = await fetch(`${API_URL}${sep}includeApoio=1`, { redirect: "follow" });
-        const json = await response.json();
-        if (Array.isArray(json)) {
-          setEvents(normalizeData(json));
-        } else if (json && Array.isArray(json.events)) {
-          setEvents(normalizeData(json.events, json.apoio || []));
-        } else {
-          throw new Error("Formato JSON inválido");
-        }
-      } catch (error) {
-        console.warn("Usando base local de demonstração:", error);
-        setEvents(normalizeData(MOCK_DATA));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    const handleClickOutside = () => setOpenDropdown(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Atualizações no Google Sheets (Coluna J = Status, Coluna K = Articulador Input, Coluna L = Prioridade)
-  const handleUpdateField = async (id, fieldKey, value, postPayload) => {
-    setEvents(prev => prev.map(ev => ev.id === id ? { ...ev, [fieldKey]: value } : ev));
-    if (selectedEvent && selectedEvent.id === id) {
-      setSelectedEvent(prev => ({ ...prev, [fieldKey]: value }));
-    }
-    if (API_URL) {
-      fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ id, ...postPayload }),
-        redirect: "follow"
-      }).catch(() => {});
+  useEffect(() => {
+    setCurrentCardPage(1);
+  }, [
+    searchTerm, scopeCapital, scopeInterior, showFuture, showPast, showPessoal, showOnlyImportant,
+    filterMunicipios, filterRegioes, filterBairros, filterClasses, filterArticuladores,
+    filterStatus, filterPrioridades, filterModalidades, filterAnos, sortConfig, cardsPerPage
+  ]);
+
+  const fetchSheetData = async () => {
+    setLoading(true);
+    try {
+      if (!API_URL) throw new Error("Sem API URL, usando mock");
+      const response = await fetch(API_URL, { redirect: "follow" });
+      const text = await response.text();
+      const parsed = JSON.parse(text);
+      const rawArray = Array.isArray(parsed) ? parsed : (parsed.events || []);
+      setEvents(normalizeData(rawArray));
+    } catch (error) {
+      console.warn("Usando base local de demonstração:", error);
+      setEvents(normalizeData(MOCK_DATA));
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Opções e contadores dinâmicos para todos os MultiSelects
-  const filterMeta = useMemo(() => {
-    const buildMeta = (key) => {
-      const counts = {};
-      events.forEach(e => {
-        const val = e[key];
-        if (val && val !== '-' && val.toString().trim() !== '') {
-          counts[val] = (counts[val] || 0) + 1;
-        }
-      });
-      const options = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-      return { options, counts };
-    };
-    return {
-      regioesSC: buildMeta('Região SC'),
-      municipios: buildMeta('Município'),
-      bairros: buildMeta('Bairro'),
-      articuladores: buildMeta('Articulador'),
-      classes: buildMeta('Classe de Atividade'),
-      status: buildMeta('STATUS'),
-      prioridades: buildMeta('Prioridade'),
-      modalidades: buildMeta('Modalidade')
-    };
-  }, [events]);
+  useEffect(() => {
+    document.title = "TABULUM - GesTAgen";
+    fetchSheetData();
 
-  // Filtro Global Unificado
-  const filteredEvents = useMemo(() => {
-    const seenDedup = new Set();
+    fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json')
+      .then(res => res.json())
+      .then(data => setMapGeoJson(data))
+      .catch(err => console.error("Erro ao carregar GeoJSON de SC:", err));
+  }, []);
 
-    let result = events.filter(ev => {
-      if (dedupVisual) {
-        if (seenDedup.has(ev._dedupKey)) return false;
-      }
+  // Atualizações diretas no Google Sheets (Coluna J = Status, Coluna K = Articulador Input, Coluna L = Prioridade)
+  const handleUpdateStatus = async (id, newStatus) => {
+    setEvents(prev => prev.map(ev => ev.id === id ? { ...ev, 'STATUS': newStatus } : ev));
+    if (selectedEvent && selectedEvent.id === id) setSelectedEvent(prev => ({ ...prev, 'STATUS': newStatus }));
+    if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, status: newStatus }), redirect: "follow" }).catch(() => {});
+  };
 
-      const isF = isFutureOrToday(ev['Início']);
-      const isP = isPastEvent(ev['Início']);
+  const handleUpdatePriority = async (id, newPriority) => {
+    setEvents(prev => prev.map(ev => ev.id === id ? { ...ev, 'Prioridade': newPriority } : ev));
+    if (selectedEvent && selectedEvent.id === id) setSelectedEvent(prev => ({ ...prev, 'Prioridade': newPriority }));
+    if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, prioridade: newPriority === 'Sem Prioridade' ? '' : newPriority }), redirect: "follow" }).catch(() => {});
+  };
+
+  const handleUpdateArticulador = async (id, newArticulador) => {
+    const cleanArt = toProperCase(newArticulador);
+    setEvents(prev => prev.map(ev => ev.id === id ? { ...ev, 'Articulador': cleanArt } : ev));
+    if (selectedEvent && selectedEvent.id === id) setSelectedEvent(prev => ({ ...prev, 'Articulador': cleanArt }));
+    if (API_URL) fetch(API_URL, { method: 'POST', body: JSON.stringify({ id, articuladorInput: cleanArt }), redirect: "follow" }).catch(() => {});
+  };
+
+  // Listas únicas para os MultiSelects
+  const municipiosOptions = useMemo(() => [...new Set(events.map(e => e['Município']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [events]);
+  const regioesOptions = useMemo(() => [...new Set(events.map(e => e['Região']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [events]);
+  const bairrosOptions = useMemo(() => [...new Set(events.map(e => e['Bairro']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [events]);
+  const classesOptions = useMemo(() => [...new Set(events.map(e => e['Classe de Atividade']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [events]);
+  const articuladoresOptions = useMemo(() => [...new Set(events.map(e => e['Articulador']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [events]);
+  const statusOptions = useMemo(() => [...new Set(events.map(e => e['STATUS']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [events]);
+  const prioridadesOptions = ['Alta', 'Média', 'Baixa', 'Sem Prioridade'];
+  const modalidadesOptions = ['Presencial', 'Online'];
+  const anosOptions = useMemo(() => [...new Set(events.map(e => e['ANO']).filter(Boolean))].sort(), [events]);
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setScopeCapital(true);
+    setScopeInterior(true);
+    setShowFuture(true);
+    setShowPast(false);
+    setShowPessoal(false);
+    setShowOnlyImportant(false);
+    setFilterMunicipios([]);
+    setFilterRegioes([]);
+    setFilterBairros([]);
+    setFilterClasses([]);
+    setFilterArticuladores([]);
+    setFilterStatus([]);
+    setFilterPrioridades([]);
+    setFilterModalidades([]);
+    setFilterAnos([]);
+  };
+
+  const resetToFrontPage = () => {
+    setCurrentView('list');
+    setViewMode('table');
+    setSelectedEntityFicha(null);
+    setEntityHistory([]);
+    clearAllFilters();
+    setSortConfig({ key: 'Início', direction: 'asc' });
+  };
+
+  // Navegação de Fichas Cruzadas (idêntica ao TABULUM - Emendas)
+  const openEntityFicha = (type, value, e = null) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!value || String(value).trim() === '' || String(value).trim() === '-') return;
+    const cleanVal = String(value).trim();
+
+    if (currentView === 'entity' && selectedEntityFicha) {
+      if (selectedEntityFicha.type === type && selectedEntityFicha.value === cleanVal) return;
+      setEntityHistory(prev => [...prev, selectedEntityFicha]);
+    } else {
+      setEntityHistory([]);
+    }
+
+    setSelectedEntityFicha({ type, value: cleanVal });
+    setCurrentView('entity');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goBackFromEntityFicha = () => {
+    if (entityHistory.length > 0) {
+      const previous = entityHistory[entityHistory.length - 1];
+      setEntityHistory(prev => prev.slice(0, -1));
+      setSelectedEntityFicha(previous);
+    } else {
+      setSelectedEntityFicha(null);
+      setCurrentView('list');
+    }
+  };
+
+  const applyEntityFilterToMainList = (type, value) => {
+    clearAllFilters();
+    setShowPast(true);
+    setShowFuture(true);
+    setSelectedEntityFicha(null);
+    setEntityHistory([]);
+    setCurrentView('list');
+    if (type === 'municipio') setFilterMunicipios([value]);
+    if (type === 'regiao') setFilterRegioes([value]);
+    if (type === 'bairro') setFilterBairros([value]);
+    if (type === 'classe') setFilterClasses([value]);
+    if (type === 'articulador') setFilterArticuladores([value]);
+    if (type === 'status') setFilterStatus([value]);
+    if (type === 'prioridade') setFilterPrioridades([value]);
+    if (type === 'modalidade') setFilterModalidades([value]);
+    if (type === 'ano') setFilterAnos([String(value)]);
+    if (type === 'mes_ano') setSearchTerm(String(value));
+  };
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Eventos filtrados e ordenados
+  const filteredAndSortedEvents = useMemo(() => {
+    const filtered = events.filter(ev => {
+      const isF = isFuture(ev['Início']);
+      const isP = isPast(ev['Início']);
       if (!showFuture && isF) return false;
       if (!showPast && isP) return false;
       if (!showFuture && !showPast) return false;
 
-      if (dateFrom) {
-        const dEv = parseLocalDate(ev['Início']);
-        const dFrom = parseLocalDate(dateFrom);
-        if (dEv && dFrom && dEv < dFrom) return false;
-      }
-      if (dateTo) {
-        const dEv = parseLocalDate(ev['Início']);
-        const dTo = parseLocalDate(dateTo);
-        if (dEv && dTo && dEv > dTo) return false;
-      }
-
       const isPessoal = normalizerFilter(ev['Classe de Atividade']).includes('pessoal') || normalizerFilter(ev['Classe de Atividade']).includes('feriado');
       if (!showPessoal && isPessoal) return false;
 
+      if (showOnlyImportant && ev['Prioridade'] !== 'Alta') return false;
+
       const normMun = normalizerFilter(ev['Município']);
-      const isFloripa = normMun === 'florianopolis' || normMun === 'floripa';
+      const isFloripa = normMun.includes('florianopolis') || normMun.includes('floripa');
       if (!scopeCapital && isFloripa) return false;
       if (!scopeInterior && !isFloripa) return false;
+      if (!scopeCapital && !scopeInterior) return false;
 
-      if (selectedRegioesSC.length > 0 && !selectedRegioesSC.includes(ev['Região SC'])) return false;
-      if (selectedMunicipios.length > 0 && !selectedMunicipios.includes(ev['Município'])) return false;
-      if (selectedBairrosFloripa.length > 0 && !selectedBairrosFloripa.includes(ev['Bairro'])) return false;
-      if (selectedArticuladores.length > 0 && !selectedArticuladores.includes(ev['Articulador'])) return false;
-      if (selectedClasses.length > 0 && !selectedClasses.includes(ev['Classe de Atividade'])) return false;
-      if (selectedStatus.length > 0 && !selectedStatus.includes(ev['STATUS'])) return false;
-      if (selectedPrioridades.length > 0 && !selectedPrioridades.includes(ev['Prioridade'])) return false;
-      if (selectedModalidades.length > 0 && !selectedModalidades.includes(ev['Modalidade'])) return false;
+      if (filterMunicipios.length > 0 && !filterMunicipios.includes(ev['Município'])) return false;
+      if (filterRegioes.length > 0 && !filterRegioes.includes(ev['Região'])) return false;
+      if (filterBairros.length > 0 && !filterBairros.includes(ev['Bairro'])) return false;
+      if (filterClasses.length > 0 && !filterClasses.includes(ev['Classe de Atividade'])) return false;
+      if (filterArticuladores.length > 0 && !filterArticuladores.includes(ev['Articulador'])) return false;
+      if (filterStatus.length > 0 && !filterStatus.includes(ev['STATUS'])) return false;
+      if (filterPrioridades.length > 0 && !filterPrioridades.includes(ev['Prioridade'])) return false;
+      if (filterModalidades.length > 0 && !filterModalidades.includes(ev['Modalidade'])) return false;
+      if (filterAnos.length > 0 && !filterAnos.includes(ev['ANO'])) return false;
 
-      if (search.trim() !== '') {
-        const terms = normalizerFilter(search).split(/\s+/);
-        const searchableBag = normalizerFilter([
+      if (searchTerm.trim() !== '') {
+        const term = normalizerFilter(searchTerm);
+        const bag = normalizerFilter([
           ev['Título'], ev['Descrição'], ev['Local'], ev['Município'],
-          ev['Região SC'], ev['Bairro'], ev['Distrito'], ev['Articulador'],
-          ev['Classe de Atividade'], ev['STATUS'], ev['Prioridade']
+          ev['Região'], ev['Bairro'], ev['Distrito'], ev['Articulador'],
+          ev['Classe de Atividade'], ev['STATUS'], ev['Prioridade'], ev['MES_ANO']
         ].join(' '));
-        const matchesAllTerms = terms.every(t => searchableBag.includes(t));
-        if (!matchesAllTerms) return false;
+        if (!bag.includes(term)) return false;
       }
 
-      if (dedupVisual) seenDedup.add(ev._dedupKey);
       return true;
     });
 
-    result.sort((a, b) => {
-      if (sortConfig.key === 'Início') {
-        const aTime = parseLocalDate(a['Início'])?.getTime() || 0;
-        const bTime = parseLocalDate(b['Início'])?.getTime() || 0;
-        return sortConfig.direction === 'asc' ? aTime - bTime : bTime - aTime;
-      }
-      if (sortConfig.key === 'Duração') {
-        return sortConfig.direction === 'asc' ? (a['Duração'] - b['Duração']) : (b['Duração'] - a['Duração']);
-      }
-      const aVal = (a[sortConfig.key] || '').toString().toLowerCase();
-      const bVal = (b[sortConfig.key] || '').toString().toLowerCase();
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return result;
+    return sortEventsList(filtered, sortConfig);
   }, [
-    events, search, dateFrom, dateTo, showFuture, showPast, showPessoal, dedupVisual,
-    scopeCapital, scopeInterior, selectedRegioesSC, selectedMunicipios, selectedBairrosFloripa,
-    selectedArticuladores, selectedClasses, selectedStatus, selectedPrioridades, selectedModalidades, sortConfig
+    events, searchTerm, scopeCapital, scopeInterior, showFuture, showPast, showPessoal, showOnlyImportant,
+    filterMunicipios, filterRegioes, filterBairros, filterClasses, filterArticuladores,
+    filterStatus, filterPrioridades, filterModalidades, filterAnos, sortConfig
   ]);
 
-  // ==========================================
-  // CÁLCULO DE FICHAS CRUZADAS (DOSSIÊ DE MUNICÍPIO OU ARTICULADOR)
-  // ==========================================
-  const activeFichaData = useMemo(() => {
-    if (!fichaModal) return null;
-    const isMun = fichaModal.type === 'municipio';
-    const targetName = fichaModal.name;
+  // Métricas do Gráfico Resumido de Informações Gerais (Preservado e levado para a Barra Superior Fixa)
+  const summaryStats = useMemo(() => {
+    const total = filteredAndSortedEvents.length;
+    let capital = 0;
+    let futuras = 0;
+    let pendentes = 0;
 
-    // Usa o universo deduplicado (sem agendas pessoais) para a ficha refletir o histórico completo daquele Município/Articulador
-    const seen = new Set();
-    const matchingEvents = events.filter(ev => {
-      if (dedupVisual) {
-        if (seen.has(ev._dedupKey)) return false;
-      }
-      const isPessoal = normalizerFilter(ev['Classe de Atividade']).includes('pessoal');
-      if (!showPessoal && isPessoal) return false;
-      const match = isMun ? ev['Município'] === targetName : ev['Articulador'] === targetName;
-      if (match && dedupVisual) seen.add(ev._dedupKey);
-      return match;
-    }).sort((a, b) => (parseLocalDate(b['Início'])?.getTime() || 0) - (parseLocalDate(a['Início'])?.getTime() || 0));
-
-    let presenciais = 0, online = 0, totalMinutos = 0, confirmados = 0, realizados = 0, pendentes = 0, altaPrio = 0;
-    let lastVisitDate = null, nextVisitDate = null;
-    const byClass = {}, byCrossEntity = {}, byBairro = {}, byMonth = {};
-
-    matchingEvents.forEach(ev => {
-      if (ev['Modalidade'] === 'ONLINE') online++; else presenciais++;
-      totalMinutos += Number(ev['Duração']) || 0;
-
-      if (ev['STATUS'] === 'Confirmado') confirmados++;
-      else if (ev['STATUS'] === 'Realizado') realizados++;
-      else pendentes++;
-
-      if (ev['Prioridade'] === 'Alta') altaPrio++;
-
-      const d = parseLocalDate(ev['Início']);
-      if (d) {
-        if (d < getTodayStart() && (!lastVisitDate || d > lastVisitDate)) lastVisitDate = d;
-        if (d >= getTodayStart() && (!nextVisitDate || d < nextVisitDate)) nextVisitDate = d;
-        const mKey = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-        byMonth[mKey] = (byMonth[mKey] || 0) + 1;
-      }
-
-      const cls = ev['Classe de Atividade'] || 'SEM CLASSE';
-      byClass[cls] = (byClass[cls] || 0) + 1;
-
-      const crossKey = isMun ? (ev['Articulador'] || 'Sem Articulador') : (ev['Município'] || 'Não Identificado');
-      byCrossEntity[crossKey] = (byCrossEntity[crossKey] || 0) + 1;
-
-      if (isMun && ev['Bairro'] && ev['Bairro'] !== '-') {
-        byBairro[ev['Bairro']] = (byBairro[ev['Bairro']] || 0) + 1;
-      }
+    filteredAndSortedEvents.forEach(ev => {
+      const mun = normalizerFilter(ev['Município']);
+      if (mun.includes('florianopolis') || mun.includes('floripa')) capital++;
+      if (isFuture(ev['Início'])) futuras++;
+      if (ev['STATUS'] === 'Pendente') pendentes++;
     });
 
-    const toSortedArray = (obj) => Object.entries(obj).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    return { total, capital, interior: total - capital, futuras, pendentes };
+  }, [filteredAndSortedEvents]);
 
-    return {
-      type: fichaModal.type,
-      name: targetName,
-      regiaoSC: isMun ? (matchingEvents[0]?.['Região SC'] || SC_REGION_MAP[normalizerFilter(targetName)] || 'SANTA CATARINA') : null,
-      total: matchingEvents.length,
-      presenciais,
-      online,
-      horas: (totalMinutos / 60).toFixed(1),
-      confirmados,
-      realizados,
-      pendentes,
-      altaPrio,
-      lastVisit: lastVisitDate ? formatDate(lastVisitDate) : 'Sem registro anterior',
-      nextVisit: nextVisitDate ? formatDate(nextVisitDate) : 'Nenhuma agendada',
-      classesList: toSortedArray(byClass),
-      crossList: toSortedArray(byCrossEntity),
-      bairrosList: toSortedArray(byBairro),
-      eventsList: matchingEvents
-    };
-  }, [fichaModal, events, dedupVisual, showPessoal]);
+  const upcomingImportantCount = useMemo(() => {
+    return events.filter(ev => isFuture(ev['Início']) && ev['Prioridade'] === 'Alta').length;
+  }, [events]);
 
-  // ==========================================
-  // ESTATÍSTICAS DO DASHBOARD E RANKINGS
-  // ==========================================
-  const dashboardStats = useMemo(() => {
-    const aggCount = (key, ignoreValues = []) => {
-      const counts = {};
-      filteredEvents.forEach(ev => {
-        const val = ev[key];
-        if (!val || val === '-' || val.toString().trim() === '') return;
-        if (ignoreValues.includes(normalizerFilter(val))) return;
-        counts[val] = (counts[val] || 0) + 1;
+  const exportRowsToCSV = (rowsToExport, filename = "agendas_filtradas.csv") => {
+    if (!rowsToExport || rowsToExport.length === 0) {
+      alert("Nenhum dado disponível para exportar.");
+      return;
+    }
+    const headers = ['Título', 'Início', 'Fim', 'Duração', 'Classe de Atividade', 'Município', 'Região', 'Bairro', 'Distrito', 'Articulador', 'Modalidade', 'STATUS', 'Prioridade', 'Local', 'Descrição'];
+    const csvRows = [headers.map(h => `"${h}"`).join(',')];
+    rowsToExport.forEach(row => {
+      const values = headers.map(header => {
+        const val = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+        return `"${val.replace(/"/g, '""')}"`;
       });
-      return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-    };
-
-    const temporalMap = {};
-    let totalMin = 0, presenciaisCount = 0, onlineCount = 0, municipiosUnicos = new Set();
-
-    filteredEvents.forEach(ev => {
-      totalMin += Number(ev['Duração']) || 0;
-      if (ev['Modalidade'] === 'ONLINE') onlineCount++; else presenciaisCount++;
-      if (ev['Município'] && ev['Município'] !== 'Não Identificado') municipiosUnicos.add(ev['Município']);
-
-      const d = parseLocalDate(ev['Início']);
-      if (d) {
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!temporalMap[key]) temporalMap[key] = { value: 0, hours: 0 };
-        temporalMap[key].value += 1;
-        temporalMap[key].hours += (Number(ev['Duração']) || 0) / 60;
-      }
+      csvRows.push(values.join(','));
     });
-
-    const temporalLine = Object.entries(temporalMap)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([k, v]) => {
-        const [y, m] = k.split('-');
-        return { name: `${m}/${y}`, value: v.value, hours: Number(v.hours.toFixed(1)) };
-      });
-
-    return {
-      totalHours: (totalMin / 60).toFixed(1),
-      presenciaisCount,
-      onlineCount,
-      municipiosVisitadosCount: municipiosUnicos.size,
-      municipiosRanking: aggCount('Município', ['nao identificado']),
-      regioesSCRanking: aggCount('Região SC', ['nao identificada']),
-      bairrosFloripaRanking: aggCount('Bairro', ['nao especificado', 'digital / online']),
-      classes: aggCount('Classe de Atividade', ['outros eventos', 'sem classe']),
-      articuladores: aggCount('Articulador'),
-      temporalLine
-    };
-  }, [filteredEvents]);
-
-  const resetAllFilters = () => {
-    setSearch('');
-    setDateFrom('');
-    setDateTo('');
-    setShowFuture(true);
-    setShowPast(true);
-    setShowPessoal(false);
-    setScopeCapital(true);
-    setScopeInterior(true);
-    setSelectedRegioesSC([]);
-    setSelectedMunicipios([]);
-    setSelectedBairrosFloripa([]);
-    setSelectedArticuladores([]);
-    setSelectedClasses([]);
-    setSelectedStatus([]);
-    setSelectedPrioridades([]);
-    setSelectedModalidades([]);
+    const csvString = "\uFEFF" + csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const activeFiltersCount = [
-    search, dateFrom, dateTo,
-    ...selectedRegioesSC, ...selectedMunicipios, ...selectedBairrosFloripa,
-    ...selectedArticuladores, ...selectedClasses, ...selectedStatus,
-    ...selectedPrioridades, ...selectedModalidades
-  ].filter(Boolean).length;
+  const getStatusClasses = (status) => {
+    const s = String(status || '').toLowerCase();
+    if (s === 'confirmado') return 'bg-teal-700 text-white border-slate-700 hover:bg-teal-800';
+    if (s === 'realizado') return 'bg-amber-300 text-slate-900 border-slate-700 hover:bg-amber-400';
+    return 'bg-slate-100 text-slate-800 border-slate-400 hover:bg-slate-200';
+  };
 
-  // ==========================================
-  // BARRA SUPERIOR UNIVERSAL DE FILTROS E BUSCA
-  // ==========================================
-  const renderUniversalTopBar = () => (
-    <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] p-4 mb-6 flex flex-col gap-3 relative z-30">
-      {/* Linha 1: Busca Universal + Botões Rápidos de Tempo/Escopo */}
-      <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder="🔎 PROCURA UNIVERSAL (TÍTULO, DESCRIÇÃO, MUNICÍPIO, BAIRRO, ARTICULADOR, CLASSE, LOCAL)..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-full px-4 py-2.5 bg-[#Fdfcf0] border-[3px] border-[#111111] focus:outline-none focus:bg-[#ffffff] font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_#111111] text-[#111111] placeholder-[#111111]/60"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#C1272D] text-[#Fdfcf0] px-2 py-0.5 text-[9px] font-black border-[2px] border-[#111111]"
-            >
-              LIMPAR
-            </button>
-          )}
+  const getPrioridadeClasses = (prio) => {
+    const p = String(prio || '').toLowerCase();
+    if (p === 'alta') return 'bg-rose-700 text-white border-rose-900 hover:bg-rose-800';
+    if (p === 'média' || p === 'media') return 'bg-amber-300 text-slate-900 border-slate-700 hover:bg-amber-400';
+    if (p === 'baixa') return 'bg-teal-700 text-white border-teal-900 hover:bg-teal-800';
+    return 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100';
+  };
+
+  const getClasseBadgeClasses = (classe) => {
+    const c = String(classe || '').toUpperCase();
+    if (c.includes('PLENÁRIA') || c.includes('AUDIÊNCIA') || c.includes('SESSÃO')) {
+      return 'bg-rose-50 text-rose-800 border-rose-600/70 hover:bg-rose-100';
+    }
+    if (c.includes('REUNIÃO') || c.includes('SEMINÁRIO')) {
+      return 'bg-teal-50 text-teal-800 border-teal-600/70 hover:bg-teal-100';
+    }
+    if (c.includes('VIAGEM') || c.includes('EVENTO') || c.includes('ATO')) {
+      return 'bg-amber-50 text-amber-900 border-amber-500/80 hover:bg-amber-100';
+    }
+    return 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100';
+  };
+
+  const sortableFieldsList = [
+    { key: 'Início', label: 'Data' },
+    { key: 'Título', label: 'Título' },
+    { key: 'Classe de Atividade', label: 'Classe de Atividade' },
+    { key: 'Município', label: 'Município' },
+    { key: 'Região', label: 'Região SC' },
+    { key: 'Bairro', label: 'Bairro (Floripa)' },
+    { key: 'Articulador', label: 'Articulador' },
+    { key: 'STATUS', label: 'Status' },
+    { key: 'Prioridade', label: 'Prioridade' },
+    { key: 'Duração', label: 'Duração (min)' }
+  ];
+
+  const getCurrentPageTitle = () => {
+    if (currentView === 'list') return 'Painel de Agendas';
+    if (currentView === 'dashboard') return 'Dashboard & Mapas';
+    if (currentView === 'entity' && selectedEntityFicha) {
+      const meta = ENTITY_TYPE_META[selectedEntityFicha.type];
+      return `${meta ? meta.label : 'Ficha'}: ${selectedEntityFicha.value}`;
+    }
+    if (currentView === 'detail' && selectedEvent) {
+      return selectedEvent['Título'];
+    }
+    return 'Painel de Agendas';
+  };
+
+  // MultiSelect minimalista e suave (idêntico ao TABULUM - Emendas)
+  const MultiSelect = ({ id, label, options, selected, onChange }) => {
+    const isOpen = openDropdown === id;
+    const [optionSearch, setOptionSearch] = useState('');
+
+    const handleToggleDropdown = (e) => {
+      e.stopPropagation();
+      setOpenDropdown(isOpen ? null : id);
+    };
+
+    const handleToggleOption = (e, opt) => {
+      e.stopPropagation();
+      if (selected.includes(opt)) {
+        onChange(selected.filter(i => i !== opt));
+      } else {
+        onChange([...selected, opt]);
+      }
+    };
+
+    const handleClear = (e) => {
+      e.stopPropagation();
+      onChange([]);
+    };
+
+    let displayText = label;
+    if (selected.length === 1) displayText = `${label}: ${selected[0]}`;
+    else if (selected.length > 1) displayText = `${label} (${selected.length})`;
+
+    const visibleOptions = options.filter(opt =>
+      String(opt).toLowerCase().includes(optionSearch.toLowerCase())
+    );
+
+    return (
+      <div className="relative">
+        <div
+          onClick={handleToggleDropdown}
+          className={`px-2 py-1 rounded-xs border transition-colors text-xs cursor-pointer flex justify-between items-center gap-1 max-w-[165px] ${
+            selected.length > 0
+              ? 'border-teal-700 bg-teal-50 text-teal-950 font-semibold'
+              : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 font-normal'
+          }`}
+        >
+          <span className="truncate" title={displayText}>{displayText}</span>
+          <div className="flex items-center space-x-0.5 flex-shrink-0">
+            {selected.length > 0 && (
+              <span onClick={handleClear} className="hover:text-rose-700 p-0.5" title="Limpar filtro">
+                <XIcon className="w-3 h-3" />
+              </span>
+            )}
+            <ChevronDownIcon className="w-3 h-3 text-slate-400" />
+          </div>
         </div>
 
-        {/* Datas De / Até */}
-        <div className="flex items-center gap-2 bg-[#Fdfcf0] px-2.5 py-1.5 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-          <span className="text-[8px] font-black uppercase">DE:</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="bg-transparent text-[9px] font-black uppercase focus:outline-none"
-          />
-          <span className="text-[8px] font-black uppercase ml-1">ATÉ:</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="bg-transparent text-[9px] font-black uppercase focus:outline-none"
-          />
-        </div>
-
-        {/* Toggles Rápidos */}
-        <div className="flex flex-wrap gap-1.5 bg-[#111111] p-1.5 border-[3px] border-[#111111]">
-          <button
-            type="button"
-            onClick={() => setScopeCapital(!scopeCapital)}
-            className={`px-2.5 py-1 text-[8px] font-black uppercase border-2 ${scopeCapital ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent opacity-60'}`}
+        {isOpen && (
+          <div
+            className="absolute z-50 top-full left-0 mt-1 w-60 max-h-64 overflow-y-auto bg-white border border-slate-300 shadow-md rounded-xs flex flex-col p-1.5"
+            onClick={(e) => e.stopPropagation()}
           >
-            {scopeCapital ? '✓ ' : ''}CAPITAL
-          </button>
-          <button
-            type="button"
-            onClick={() => setScopeInterior(!scopeInterior)}
-            className={`px-2.5 py-1 text-[8px] font-black uppercase border-2 ${scopeInterior ? 'bg-[#007D8A] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent opacity-60'}`}
-          >
-            {scopeInterior ? '✓ ' : ''}ESTADO (SC)
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowFuture(!showFuture)}
-            className={`px-2.5 py-1 text-[8px] font-black uppercase border-2 ${showFuture ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent opacity-60'}`}
-          >
-            {showFuture ? '✓ ' : ''}FUTUROS
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowPast(!showPast)}
-            className={`px-2.5 py-1 text-[8px] font-black uppercase border-2 ${showPast ? 'bg-[#EAA221] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent opacity-60'}`}
-          >
-            {showPast ? '✓ ' : ''}PASSADOS
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowPessoal(!showPessoal)}
-            className={`px-2.5 py-1 text-[8px] font-black uppercase border-2 ${showPessoal ? 'bg-[#Fdfcf0] text-[#111111] border-[#111111]' : 'text-[#Fdfcf0] border-transparent opacity-60'}`}
-          >
-            {showPessoal ? '✓ ' : ''}PESSOAL
-          </button>
-          <button
-            type="button"
-            onClick={() => setDedupVisual(!dedupVisual)}
-            title="Oculta linhas duplicadas geradas pela varredura da agenda"
-            className={`px-2.5 py-1 text-[8px] font-black uppercase border-2 ${dedupVisual ? 'bg-[#C1272D] text-[#Fdfcf0] border-[#Fdfcf0]' : 'text-[#Fdfcf0] border-transparent opacity-60'}`}
-          >
-            {dedupVisual ? '✓ ' : ''}SEM DUPLICATAS
-          </button>
-        </div>
+            {options.length > 7 && (
+              <input
+                type="text"
+                placeholder="Buscar opção..."
+                value={optionSearch}
+                onChange={(e) => setOptionSearch(e.target.value)}
+                className="mb-1.5 px-2 py-1 text-xs border border-slate-200 focus:outline-none focus:border-teal-700 text-slate-800 rounded-xs"
+              />
+            )}
+            {visibleOptions.map(opt => (
+              <label key={opt} className="flex items-center space-x-2 cursor-pointer hover:bg-amber-50/70 px-1.5 py-1 rounded-xs transition-colors">
+                <input
+                  type="checkbox"
+                  className="accent-teal-700 w-3.5 h-3.5 border border-slate-400 cursor-pointer flex-shrink-0"
+                  checked={selected.includes(opt)}
+                  onChange={(e) => handleToggleOption(e, opt)}
+                />
+                <span className="text-xs text-slate-700 truncate flex-1" title={opt}>{opt}</span>
+              </label>
+            ))}
+            {visibleOptions.length === 0 && (
+              <span className="text-xs text-slate-400 italic p-2 text-center">Nenhum item</span>
+            )}
+          </div>
+        )}
       </div>
+    );
+  };
 
-      {/* Linha 2: Todos os Parâmetros da Planilha em Multi-Seleção */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2.5 pt-2 border-t-[2px] border-dashed border-[#111111]">
-        <MultiSelect
-          label="1. Região SC"
-          options={filterMeta.regioesSC.options}
-          countsMap={filterMeta.regioesSC.counts}
-          selected={selectedRegioesSC}
-          onChange={setSelectedRegioesSC}
-          placeholder="TODAS REGIÕES"
-        />
-        <MultiSelect
-          label="2. Município"
-          options={filterMeta.municipios.options}
-          countsMap={filterMeta.municipios.counts}
-          selected={selectedMunicipios}
-          onChange={setSelectedMunicipios}
-          placeholder="TODOS MUNICÍPIOS"
-        />
-        <MultiSelect
-          label="3. Bairro (Floripa)"
-          options={filterMeta.bairros.options}
-          countsMap={filterMeta.bairros.counts}
-          selected={selectedBairrosFloripa}
-          onChange={setSelectedBairrosFloripa}
-          placeholder="TODOS BAIRROS"
-        />
-        <MultiSelect
-          label="4. Classe de Atividade"
-          options={filterMeta.classes.options}
-          countsMap={filterMeta.classes.counts}
-          selected={selectedClasses}
-          onChange={setSelectedClasses}
-          placeholder="TODAS CLASSES"
-        />
-        <MultiSelect
-          label="5. Articulador"
-          options={filterMeta.articuladores.options}
-          countsMap={filterMeta.articuladores.counts}
-          selected={selectedArticuladores}
-          onChange={setSelectedArticuladores}
-          placeholder="TODOS ARTICULADORES"
-        />
-        <MultiSelect
-          label="6. Status"
-          options={filterMeta.status.options}
-          countsMap={filterMeta.status.counts}
-          selected={selectedStatus}
-          onChange={setSelectedStatus}
-          placeholder="TODOS STATUS"
-        />
-        <MultiSelect
-          label="7. Prioridade"
-          options={filterMeta.prioridades.options}
-          countsMap={filterMeta.prioridades.counts}
-          selected={selectedPrioridades}
-          onChange={setSelectedPrioridades}
-          placeholder="TODAS PRIORIDADES"
-        />
-        <MultiSelect
-          label="8. Modalidade"
-          options={filterMeta.modalidades.options}
-          countsMap={filterMeta.modalidades.counts}
-          selected={selectedModalidades}
-          onChange={setSelectedModalidades}
-          placeholder="PRESENCIAL / ONLINE"
-        />
-      </div>
+  // ============================================================================
+  // BARRA SUPERIOR ÚNICA E FIXA (Sem barra lateral + Gráfico Geral Fixo Integrado)
+  // ============================================================================
+  const UnifiedTopBar = () => {
+    const activeFilterCount =
+      filterMunicipios.length +
+      filterRegioes.length +
+      filterBairros.length +
+      filterClasses.length +
+      filterArticuladores.length +
+      filterStatus.length +
+      filterPrioridades.length +
+      filterModalidades.length +
+      filterAnos.length;
 
-      {/* Linha 3: Barra de Status Ativo e Ações Rápidas */}
-      <div className="flex flex-wrap justify-between items-center pt-2 border-t-[3px] border-[#111111] gap-2">
-        <div className="flex flex-wrap items-center gap-3 text-[9px] font-black uppercase">
-          <span className="bg-[#111111] text-[#Fdfcf0] px-2.5 py-1">
-            EXIBINDO: {filteredEvents.length} AGENDAS ({dashboardStats.totalHours}h TOTAIS)
-          </span>
-          <span className="text-[#007D8A]">
-            📍 PRESENCIAIS: {dashboardStats.presenciaisCount} | 💻 ONLINE: {dashboardStats.onlineCount}
-          </span>
-          <span className="text-[#C1272D]">
-            🏛️ MUNICÍPIOS NO FILTRO: {dashboardStats.municipiosVisitadosCount}
-          </span>
-          {selectedMunicipios.length === 1 && (
-            <button
-              type="button"
-              onClick={() => setFichaModal({ type: 'municipio', name: selectedMunicipios[0] })}
-              className="bg-[#C1272D] text-[#Fdfcf0] px-3 py-1 border-[2px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#EAA221] hover:text-[#111111] transition-colors"
-            >
-              📋 ABRIR FICHA DE {selectedMunicipios[0]}
-            </button>
-          )}
+    const hasFilters = Boolean(searchTerm) || activeFilterCount > 0 || !scopeCapital || !scopeInterior || showOnlyImportant || showPessoal;
+
+    const rowsForExport = currentView === 'entity' && selectedEntityFicha
+      ? events.filter(e => String(e[ENTITY_TYPE_META[selectedEntityFicha.type]?.field] || '').trim().toLowerCase() === String(selectedEntityFicha.value).trim().toLowerCase())
+      : filteredAndSortedEvents;
+
+    const capPct = summaryStats.total === 0 ? 0 : (summaryStats.capital / summaryStats.total) * 100;
+    const intPct = summaryStats.total === 0 ? 0 : (summaryStats.interior / summaryStats.total) * 100;
+
+    return (
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xs border-b border-slate-300 shadow-xs print:hidden">
+        {/* Filete Mondrian Delicado: Carmesim, Azul-Esverdeado e Amarelo */}
+        <div className="h-1 w-full flex">
+          <div className="w-1/3 bg-rose-700"></div>
+          <div className="w-1/3 bg-teal-700"></div>
+          <div className="w-1/3 bg-amber-300"></div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {activeFiltersCount > 0 && (
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="px-3 py-1 bg-[#C1272D] text-[#Fdfcf0] text-[9px] font-black uppercase border-[2px] border-[#111111] shadow-[2px_2px_0px_0px_#111111]"
-            >
-              LIMPAR FILTROS ({activeFiltersCount})
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setSortConfig(prev => ({ key: 'Início', direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
-            className="px-3 py-1 bg-[#Fdfcf0] text-[#111111] text-[9px] font-black uppercase border-[2px] border-[#111111]"
-          >
-            DATA: {sortConfig.direction === 'asc' ? 'CRESCENTE ▲' : 'DECRESCENTE ▼'}
-          </button>
-          {activeTab === 'list' && (
-            <div className="flex bg-[#111111] p-0.5 border-[2px] border-[#111111]">
+        {/* LINHA 1: Logo + Título + Navegação Painel/Dashboard + GRÁFICO RESUMIDO FIXO + Prioridades + Sincronizar */}
+        <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80">
+          {/* Esquerda: Marca + Página Atual + Navegação */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center cursor-pointer group flex-shrink-0" onClick={resetToFrontPage} title="Voltar ao Início e Limpar Filtros">
+              <img
+                src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png"
+                alt="Ícone TABULUM"
+                className="w-6 h-6 sm:w-7 sm:h-7 mr-2 object-contain transition-transform group-hover:scale-105"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+              <span className="font-bold text-sm sm:text-base tracking-tight text-slate-900 whitespace-nowrap">
+                TABULUM - GesTAgen
+              </span>
+            </div>
+
+            <span className="text-slate-300 select-none">|</span>
+
+            <span className="text-xs sm:text-sm font-semibold text-teal-800 truncate max-w-[140px] sm:max-w-[260px]" title={getCurrentPageTitle()}>
+              {getCurrentPageTitle()}
+            </span>
+
+            <div className="flex border border-slate-300 rounded-xs overflow-hidden bg-slate-50 ml-1 flex-shrink-0">
               <button
-                type="button"
-                onClick={() => setViewMode('cards')}
-                className={`px-2.5 py-1 text-[8px] font-black uppercase ${viewMode === 'cards' ? 'bg-[#EAA221] text-[#111111]' : 'text-[#Fdfcf0]'}`}
+                onClick={() => { setCurrentView('list'); setSelectedEntityFicha(null); }}
+                className={`px-2.5 py-1 flex items-center text-xs font-medium border-r border-slate-300 transition-colors ${
+                  currentView === 'list' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+                }`}
               >
-                Cards
+                <TableIcon className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Painel</span>
               </button>
               <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`px-2.5 py-1 text-[8px] font-black uppercase ${viewMode === 'table' ? 'bg-[#EAA221] text-[#111111]' : 'text-[#Fdfcf0]'}`}
+                onClick={() => { setCurrentView('dashboard'); setSelectedEntityFicha(null); }}
+                className={`px-2.5 py-1 flex items-center text-xs font-medium transition-colors ${
+                  currentView === 'dashboard' ? 'bg-amber-300 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100'
+                }`}
               >
-                Tabela
+                <LayoutDashboardIcon className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Dashboard</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Centro/Direita: GRÁFICO DE INFORMAÇÕES GERAIS FIXO (antigo widget da barra lateral) + Botão de Prioridades + Sincronizar */}
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            {/* Widget Gráfico Resumido Fixo */}
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-300 px-3 py-1 rounded-xs">
+              <div className="flex items-baseline gap-1.5 border-r border-slate-200 pr-2.5">
+                <span className="text-[10px] font-semibold uppercase text-slate-500">Visíveis:</span>
+                <span className="text-sm font-bold text-rose-700 leading-none">{summaryStats.total}</span>
+              </div>
+
+              <div className="w-32 sm:w-40 flex flex-col justify-center">
+                <div className="flex justify-between text-[9px] font-semibold uppercase mb-0.5">
+                  <span className="text-teal-800">Cap: {summaryStats.capital}</span>
+                  <span className="text-amber-800">Est: {summaryStats.interior}</span>
+                </div>
+                <div className="h-1.5 w-full flex bg-slate-200 border border-slate-300 overflow-hidden">
+                  <div className="h-full bg-teal-700 transition-all duration-500" style={{ width: `${capPct}%` }}></div>
+                  <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${intPct}%` }}></div>
+                </div>
+              </div>
+
+              <div className="hidden md:flex items-center gap-2.5 border-l border-slate-200 pl-2.5 text-[10px] font-semibold uppercase">
+                <span className="text-slate-600">Futuras: <strong className="text-teal-700">{summaryStats.futuras}</strong></span>
+                <span className="text-slate-600">Pendentes: <strong className="text-rose-700">{summaryStats.pendentes}</strong></span>
+              </div>
+            </div>
+
+            {/* Botão Fixo de Prioridades */}
+            <button
+              onClick={() => {
+                setCurrentView('list');
+                setShowOnlyImportant(!showOnlyImportant);
+                if (!showOnlyImportant) {
+                  setShowFuture(true);
+                  setShowPast(false);
+                }
+              }}
+              className={`px-2.5 py-1 border rounded-xs text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                showOnlyImportant
+                  ? 'bg-rose-700 text-white border-rose-900'
+                  : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+              }`}
+              title="Filtrar próximos compromissos de Alta Prioridade"
+            >
+              <AlertCircleIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Prioridades</span>
+              <span className={`px-1.5 py-0.2 text-[10px] font-bold rounded-xs ${showOnlyImportant ? 'bg-white text-rose-800' : 'bg-rose-700 text-white'}`}>
+                {upcomingImportantCount}
+              </span>
+            </button>
+
+            {/* Botão Sincronizar Planilha */}
+            <button
+              onClick={fetchSheetData}
+              className="px-2 py-1 text-xs font-medium text-teal-800 bg-teal-50/80 hover:bg-teal-100 border border-teal-200 rounded-xs flex items-center transition-colors flex-shrink-0"
+              title="Recarregar dados da Planilha Google Sheets"
+            >
+              <RefreshCwIcon className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden lg:inline">{API_URL ? 'Sincronizar' : 'Demo'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* LINHA 2: Busca Universal + Toggles Rápidos + Multiseleção Suave + Ordenar Por + Lista/Card + Exportar */}
+        {(currentView === 'list' || currentView === 'dashboard' || currentView === 'entity') && (
+          <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-1.5 flex flex-wrap items-center justify-between gap-1.5 bg-white">
+            {/* Lado Esquerdo: Busca + Toggles + Multiseleção */}
+            <div className="flex flex-wrap items-center gap-1.5 flex-1">
+              <div className="relative w-36 sm:w-44">
+                <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Procura universal..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-7 pr-2 py-1 bg-slate-50/80 border border-slate-200 rounded-xs text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-700 focus:bg-white"
+                />
+              </div>
+
+              {/* Toggles Rápidos Compactos (Capital / Estado / Futuras / Passadas / Pessoal) */}
+              <div className="flex items-center border border-slate-200 rounded-xs bg-slate-50/70 overflow-hidden text-[11px]">
+                <button
+                  onClick={() => setScopeCapital(!scopeCapital)}
+                  className={`px-2 py-1 border-r border-slate-200 transition-colors ${
+                    scopeCapital ? 'bg-teal-700 text-white font-medium' : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                  title="Incluir agendas de Florianópolis"
+                >
+                  Floripa
+                </button>
+                <button
+                  onClick={() => setScopeInterior(!scopeInterior)}
+                  className={`px-2 py-1 border-r border-slate-200 transition-colors ${
+                    scopeInterior ? 'bg-teal-700 text-white font-medium' : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                  title="Incluir agendas das demais cidades de SC"
+                >
+                  Estado
+                </button>
+                <button
+                  onClick={() => setShowFuture(!showFuture)}
+                  className={`px-2 py-1 border-r border-slate-200 transition-colors ${
+                    showFuture ? 'bg-amber-200 text-slate-900 font-medium' : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                  title="Exibir agendas futuras e de hoje"
+                >
+                  Futuras
+                </button>
+                <button
+                  onClick={() => setShowPast(!showPast)}
+                  className={`px-2 py-1 border-r border-slate-200 transition-colors ${
+                    showPast ? 'bg-amber-200 text-slate-900 font-medium' : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                  title="Exibir histórico de agendas passadas"
+                >
+                  Passadas
+                </button>
+                <button
+                  onClick={() => setShowPessoal(!showPessoal)}
+                  className={`px-2 py-1 transition-colors ${
+                    showPessoal ? 'bg-slate-800 text-white font-medium' : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                  title="Exibir ou ocultar agendas pessoais"
+                >
+                  Pessoal
+                </button>
+              </div>
+
+              <button
+                onClick={() => setMobileFiltersExpanded(prev => !prev)}
+                className={`sm:hidden px-2 py-1 border rounded-xs text-xs flex items-center gap-1 ${
+                  activeFilterCount > 0 ? 'border-teal-700 bg-teal-50 text-teal-900 font-semibold' : 'border-slate-200 text-slate-600'
+                }`}
+              >
+                <FilterIcon className="w-3 h-3" />
+                <span>Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+              </button>
+
+              {/* Todos os Parâmetros da Planilha em Multiseleção */}
+              <div className={`${mobileFiltersExpanded ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-1.5`}>
+                <MultiSelect id="mun" label="Município" options={municipiosOptions} selected={filterMunicipios} onChange={setFilterMunicipios} />
+                <MultiSelect id="reg" label="Região SC" options={regioesOptions} selected={filterRegioes} onChange={setFilterRegioes} />
+                <MultiSelect id="bai" label="Bairro (Floripa)" options={bairrosOptions} selected={filterBairros} onChange={setFilterBairros} />
+                <MultiSelect id="cla" label="Classe" options={classesOptions} selected={filterClasses} onChange={setFilterClasses} />
+                <MultiSelect id="art" label="Articulador" options={articuladoresOptions} selected={filterArticuladores} onChange={setFilterArticuladores} />
+                <MultiSelect id="sta" label="Status" options={statusOptions} selected={filterStatus} onChange={setFilterStatus} />
+                <MultiSelect id="pri" label="Prioridade" options={prioridadesOptions} selected={filterPrioridades} onChange={setFilterPrioridades} />
+                <MultiSelect id="mod" label="Modalidade" options={modalidadesOptions} selected={filterModalidades} onChange={setFilterModalidades} />
+                <MultiSelect id="ano" label="Ano" options={anosOptions} selected={filterAnos} onChange={setFilterAnos} />
+
+                {hasFilters && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xs flex items-center transition-colors"
+                    title="Limpar todos os filtros"
+                  >
+                    <XIcon className="w-3 h-3 mr-0.5" /> Limpar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Lado Direito: Ordenar Por + Alternância Lista/Card + Exportar CSV/PDF */}
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
+              <div className="flex items-center border border-slate-200 rounded-xs bg-slate-50/70">
+                <select
+                  value={sortConfig.key || ''}
+                  onChange={(e) => setSortConfig({ key: e.target.value || 'Início', direction: sortConfig.direction })}
+                  className="px-2 py-1 text-xs text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+                  title="Ordenar agendas por campo"
+                >
+                  {sortableFieldsList.map(f => (
+                    <option key={f.key} value={f.key}>Ordenar: {f.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                  className="px-1.5 py-1 border-l border-slate-200 bg-amber-100/80 hover:bg-amber-200 text-xs font-semibold text-slate-800 flex items-center"
+                  title={sortConfig.direction === 'asc' ? 'Ordem Crescente' : 'Ordem Decrescente'}
+                >
+                  {sortConfig.direction === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              {currentView !== 'dashboard' && (
+                <div className="flex items-center gap-1.5">
+                  <div className="flex border border-slate-200 rounded-xs overflow-hidden bg-slate-50/70">
+                    <button
+                      onClick={() => setViewMode('table')}
+                      className={`px-2 py-1 flex items-center text-xs border-r border-slate-200 transition-colors ${
+                        viewMode === 'table' ? 'bg-slate-800 text-white font-medium' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <ListIcon className="w-3.5 h-3.5 mr-1" /> Lista
+                    </button>
+                    <button
+                      onClick={() => setViewMode('cards')}
+                      className={`px-2 py-1 flex items-center text-xs transition-colors ${
+                        viewMode === 'cards' ? 'bg-slate-800 text-white font-medium' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <GridIcon className="w-3.5 h-3.5 mr-1" /> Card
+                    </button>
+                  </div>
+
+                  {viewMode === 'cards' && (
+                    <select
+                      value={cardsPerPage}
+                      onChange={(e) => setCardsPerPage(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                      className="px-2 py-1 text-xs border border-slate-200 rounded-xs bg-slate-50/70 text-slate-700 focus:outline-none cursor-pointer"
+                    >
+                      <option value={5}>5 / pág</option>
+                      <option value={25}>25 / pág</option>
+                      <option value={50}>50 / pág</option>
+                      <option value={100}>100 / pág</option>
+                      <option value={200}>200 / pág</option>
+                      <option value="all">Todas</option>
+                    </select>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center border border-slate-200 rounded-xs bg-slate-50/70 overflow-hidden">
+                <span className="px-2 py-1 text-[11px] text-slate-500 border-r border-slate-200 select-none">
+                  Exportar:
+                </span>
+                <button
+                  onClick={() => exportRowsToCSV(rowsForExport, "agendas_filtradas.csv")}
+                  className="px-2 py-1 text-xs text-slate-700 hover:bg-amber-100 border-r border-slate-200 flex items-center transition-colors"
+                >
+                  <DownloadIcon className="w-3 h-3 mr-1" /> CSV
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="px-2 py-1 text-xs text-slate-700 hover:bg-teal-700 hover:text-white flex items-center transition-colors"
+                >
+                  <PrinterIcon className="w-3 h-3 mr-1" /> PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+    );
+  };
+
+  // ============================================================================
+  // TABELA E CARDS NO PADRÃO SUAVE DO TABULUM - EMENDAS
+  // ============================================================================
+  const renderAgendasTableOrCards = (rows, activeSortConfig, onRequestSort, activeViewMode) => {
+    const SortableHeader = ({ label, sortKey, extraClasses = "" }) => {
+      const isActive = activeSortConfig?.key === sortKey;
+      return (
+        <th
+          className={`py-2.5 text-left text-[11px] font-bold text-slate-800 uppercase cursor-pointer hover:bg-amber-300/70 transition-colors border-r border-slate-300 print:border-slate-800 select-none ${extraClasses}`}
+          onClick={() => onRequestSort(sortKey)}
+          title={`Ordenar por ${label}`}
+        >
+          <div className="flex items-center justify-between gap-1">
+            <span>{label}</span>
+            {isActive ? (
+              activeSortConfig.direction === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5 flex-shrink-0" /> : <ChevronDownIcon className="w-3.5 h-3.5 flex-shrink-0" />
+            ) : (
+              <ChevronUpIcon className="w-3.5 h-3.5 opacity-20 print:hidden flex-shrink-0" />
+            )}
+          </div>
+        </th>
+      );
+    };
+
+    if (activeViewMode === 'table') {
+      return (
+        <div className="bg-white border border-slate-300 overflow-x-auto shadow-xs print:shadow-none print:border print:overflow-visible print:w-full">
+          <table className="min-w-[1150px] w-full border-collapse table-fixed print:min-w-0 print:w-full">
+            <thead className="bg-amber-200/85 border-b border-slate-400 print:bg-amber-200">
+              <tr>
+                <SortableHeader label="Data / Hora" sortKey="Início" extraClasses="w-[125px] px-2.5" />
+                <SortableHeader label="Classe" sortKey="Classe de Atividade" extraClasses="w-[135px] px-2" />
+                <SortableHeader label="Título / Compromisso" sortKey="Título" extraClasses="w-[28%] min-w-[240px] px-3" />
+                <SortableHeader label="Município" sortKey="Município" extraClasses="w-[130px] px-2.5" />
+                <SortableHeader label="Região / Bairro" sortKey="Região" extraClasses="w-[150px] px-2.5" />
+                <SortableHeader label="Articulador" sortKey="Articulador" extraClasses="w-[110px] px-2.5" />
+                <SortableHeader label="Duração" sortKey="Duração" extraClasses="w-[80px] px-2" />
+                <SortableHeader label="Prioridade" sortKey="Prioridade" extraClasses="w-[105px] px-2" />
+                <SortableHeader label="Status" sortKey="STATUS" extraClasses="w-[110px] px-2 border-r-0" />
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-200 print:text-[9px]">
+              {rows.map((ev, idx) => (
+                <tr
+                  key={ev.id || idx}
+                  onClick={() => { setSelectedEvent(ev); setCurrentView('detail'); }}
+                  className="hover:bg-amber-50/50 cursor-pointer transition-colors print:break-inside-avoid"
+                >
+                  <td className="px-2.5 py-2.5 text-xs font-bold text-slate-900 border-r border-slate-200 align-top whitespace-normal">
+                    {formatDate(ev['Início'])}
+                    {ev['Modalidade'] === 'Online' && (
+                      <span className="block mt-0.5 text-[9px] font-semibold uppercase text-amber-800 bg-amber-100 px-1 py-0.2 w-fit border border-amber-300">
+                        Online
+                      </span>
+                    )}
+                  </td>
+
+                  <td
+                    onClick={(e) => ev['Classe de Atividade'] && openEntityFicha('classe', ev['Classe de Atividade'], e)}
+                    className="px-2 py-2.5 border-r border-slate-200 align-top"
+                  >
+                    <span
+                      className={`block w-full text-center border px-1.5 py-0.5 text-[10px] font-semibold uppercase whitespace-normal break-words leading-tight transition-colors ${getClasseBadgeClasses(ev['Classe de Atividade'])}`}
+                      title={`Abrir Ficha da Classe: ${ev['Classe de Atividade']}`}
+                    >
+                      {ev['Classe de Atividade'] || '-'}
+                    </span>
+                  </td>
+
+                  <td className="px-3 py-2.5 text-xs font-semibold text-slate-900 border-r border-slate-200 align-top whitespace-normal break-words leading-snug">
+                    {ev['Título']}
+                    {ev['Local'] && (
+                      <span className="block text-[11px] font-normal text-slate-500 mt-0.5">
+                        📍 {ev['Local']}
+                      </span>
+                    )}
+                  </td>
+
+                  <td
+                    onClick={(e) => ev['Município'] && openEntityFicha('municipio', ev['Município'], e)}
+                    className="px-2.5 py-2.5 text-xs font-bold uppercase text-teal-700 hover:text-rose-700 hover:underline border-r border-slate-200 align-top whitespace-normal break-words"
+                    title={ev['Município'] ? `Abrir Ficha do Município: ${ev['Município']}` : ''}
+                  >
+                    {ev['Município'] || '-'}
+                  </td>
+
+                  <td className="px-2.5 py-2.5 text-[11px] font-medium text-slate-700 border-r border-slate-200 align-top whitespace-normal break-words">
+                    {ev['Bairro'] ? (
+                      <span
+                        onClick={(e) => openEntityFicha('bairro', ev['Bairro'], e)}
+                        className="text-teal-800 hover:text-rose-700 hover:underline font-semibold block"
+                        title={`Abrir Ficha do Bairro: ${ev['Bairro']}`}
+                      >
+                        {ev['Bairro']} <small className="text-slate-500 font-normal">({ev['Distrito']})</small>
+                      </span>
+                    ) : (
+                      <span
+                        onClick={(e) => ev['Região'] && openEntityFicha('regiao', ev['Região'], e)}
+                        className="hover:text-teal-700 hover:underline uppercase"
+                        title={ev['Região'] ? `Abrir Ficha da Região: ${ev['Região']}` : ''}
+                      >
+                        {ev['Região'] || '-'}
+                      </span>
+                    )}
+                  </td>
+
+                  <td
+                    onClick={(e) => ev['Articulador'] && openEntityFicha('articulador', ev['Articulador'], e)}
+                    className="px-2.5 py-2.5 text-xs font-semibold text-rose-700 hover:text-teal-700 hover:underline border-r border-slate-200 align-top whitespace-normal break-words"
+                    title={ev['Articulador'] ? `Abrir Ficha do Articulador: ${ev['Articulador']}` : ''}
+                  >
+                    {ev['Articulador'] || '-'}
+                  </td>
+
+                  <td className="px-2 py-2.5 text-xs font-medium text-slate-700 border-r border-slate-200 align-top text-center">
+                    {ev['Duração'] ? `${ev['Duração']}m` : '-'}
+                  </td>
+
+                  <td className="px-2 py-2.5 border-r border-slate-200 align-top" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={ev['Prioridade'] || 'Sem Prioridade'}
+                      onChange={(e) => handleUpdatePriority(ev.id, e.target.value)}
+                      className={`w-full text-center border px-1 py-0.5 text-[10px] font-semibold uppercase cursor-pointer focus:outline-none ${getPrioridadeClasses(ev['Prioridade'])}`}
+                    >
+                      <option value="Sem Prioridade">S/ Prior.</option>
+                      <option value="Baixa">Baixa</option>
+                      <option value="Média">Média</option>
+                      <option value="Alta">Alta</option>
+                    </select>
+                  </td>
+
+                  <td className="px-2 py-2.5 align-top border-r-0" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={ev['STATUS'] || 'Pendente'}
+                      onChange={(e) => handleUpdateStatus(ev.id, e.target.value)}
+                      className={`w-full text-center border px-1 py-0.5 text-[10px] font-semibold uppercase cursor-pointer focus:outline-none ${getStatusClasses(ev['STATUS'])}`}
+                    >
+                      <option value="Pendente">Pendente</option>
+                      <option value="Confirmado">Confirmado</option>
+                      <option value="Realizado">Realizado</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan="9" className="px-6 py-10 text-center font-medium text-slate-400 uppercase text-xs">
+                    Nenhuma agenda encontrada com os filtros selecionados.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <div className="bg-slate-50 px-4 py-2 text-xs text-slate-600 flex flex-wrap justify-between gap-2 border-t border-slate-300 print:hidden">
+            <span>Exibindo todas as <strong>{rows.length}</strong> agendas filtradas</span>
+            <span className="text-slate-400">Clique em qualquer Município, Região, Bairro, Classe ou Articulador para abrir sua Ficha Cruzada</span>
+          </div>
+        </div>
+      );
+    }
+
+    // MODO CARD PAGINADO (padrão suave TABULUM - Emendas)
+    const totalCards = rows.length;
+    const effectivePerPage = cardsPerPage === 'all' ? (totalCards || 1) : Number(cardsPerPage);
+    const totalPages = Math.max(Math.ceil(totalCards / effectivePerPage), 1);
+    const safePage = Math.min(currentCardPage, totalPages);
+    const startIndex = cardsPerPage === 'all' ? 0 : (safePage - 1) * effectivePerPage;
+    const endIndex = cardsPerPage === 'all' ? totalCards : Math.min(startIndex + effectivePerPage, totalCards);
+    const paginatedCards = rows.slice(startIndex, endIndex);
+
+    const PaginationBar = () => (
+      <div className="bg-white border border-slate-300 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 print:hidden">
+        <div>
+          Exibindo <strong>{totalCards > 0 ? startIndex + 1 : 0}–{endIndex}</strong> de <strong>{totalCards}</strong> agendas
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-slate-600">
+            <span>Agendas por página:</span>
+            <select
+              value={cardsPerPage}
+              onChange={(e) => setCardsPerPage(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className="px-2 py-0.5 border border-slate-300 rounded-xs bg-slate-50 text-slate-800 font-semibold focus:outline-none cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+              <option value="all">Todas</option>
+            </select>
+          </label>
+
+          {cardsPerPage !== 'all' && totalPages > 1 && (
+            <div className="flex items-center gap-1 ml-2">
+              <button
+                disabled={safePage <= 1}
+                onClick={() => { setCurrentCardPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="px-2 py-0.5 border border-slate-300 rounded-xs bg-slate-50 hover:bg-amber-100 disabled:opacity-40 font-medium"
+              >
+                ← Anterior
+              </button>
+              <span className="px-2 font-semibold text-slate-800">
+                Pág. {safePage} de {totalPages}
+              </span>
+              <button
+                disabled={safePage >= totalPages}
+                onClick={() => { setCurrentCardPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="px-2 py-0.5 border border-slate-300 rounded-xs bg-slate-50 hover:bg-amber-100 disabled:opacity-40 font-medium"
+              >
+                Próxima →
               </button>
             </div>
           )}
         </div>
       </div>
-    </div>
-  );
+    );
 
-  // ==========================================
-  // ABA 1: LISTA E CARDS INTERATIVOS
-  // ==========================================
-  const renderList = () => (
-    <div className="space-y-6 pb-10">
-      {filteredEvents.length === 0 ? (
-        <div className="text-center py-16 font-black text-xl text-[#111111] opacity-50 bg-[#ffffff] border-[4px] border-[#111111] border-dashed">
-          NENHUM COMPROMISSO ENCONTRADO COM OS FILTROS ATUAIS
-        </div>
-      ) : viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredEvents.map((ev, i) => {
-            const prio = ev['Prioridade'];
-            const prioBg = prio === 'Alta' ? 'bg-[#C1272D] text-[#Fdfcf0]' : prio === 'Média' ? 'bg-[#EAA221] text-[#111111]' : prio === 'Baixa' ? 'bg-[#007D8A] text-[#Fdfcf0]' : 'bg-[#ffffff] text-[#111111]';
+    return (
+      <div className="space-y-4">
+        <PaginationBar />
 
-            return (
-              <div
-                key={ev.id || i}
-                onClick={() => setSelectedEvent(ev)}
-                className="bg-[#ffffff] p-4 border-[4px] border-[#111111] shadow-[6px_6px_0px_0px_#111111] hover:shadow-[10px_10px_0px_0px_#111111] hover:-translate-y-1 transition-all cursor-pointer flex flex-col h-full relative"
-              >
-                <div
-                  className="absolute top-0 right-0 px-2 py-0.5 border-l-[3px] border-b-[3px] border-[#111111] text-[7px] font-black uppercase"
-                  style={{ backgroundColor: ev['Modalidade'] === 'ONLINE' ? COLORS.mustard : isFutureOrToday(ev['Início']) ? COLORS.teal : '#cccccc', color: ev['Modalidade'] === 'ONLINE' ? '#111111' : '#ffffff' }}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:grid-cols-2">
+          {paginatedCards.map((ev, idx) => (
+            <div
+              key={ev.id || idx}
+              onClick={() => { setSelectedEvent(ev); setCurrentView('detail'); }}
+              className="border border-slate-300 bg-white shadow-xs hover:border-slate-500 transition-all flex flex-col cursor-pointer"
+            >
+              <div className="bg-amber-100/90 border-b border-slate-300 px-3.5 py-2 flex justify-between items-center gap-2">
+                <button
+                  onClick={(e) => ev['Classe de Atividade'] && openEntityFicha('classe', ev['Classe de Atividade'], e)}
+                  className={`border px-2 py-0.5 text-[10px] font-semibold uppercase transition-colors ${getClasseBadgeClasses(ev['Classe de Atividade'])}`}
+                  title={`Abrir Ficha da Classe: ${ev['Classe de Atividade']}`}
                 >
-                  {ev['Modalidade']}
+                  {ev['Classe de Atividade'] || 'Sem Classe'}
+                </button>
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                  <CalendarIcon className="w-3.5 h-3.5 text-teal-700" />
+                  {formatDate(ev['Início'])}
+                </span>
+              </div>
+
+              <div className="p-4 flex-1 flex flex-col space-y-2.5">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  {ev['Município'] ? (
+                    <button
+                      onClick={(e) => openEntityFicha('municipio', ev['Município'], e)}
+                      className="flex items-start text-left hover:underline"
+                      title={`Abrir Ficha do Município: ${ev['Município']}`}
+                    >
+                      <MapPinIcon className="w-3.5 h-3.5 mr-1 mt-0.5 text-teal-700 flex-shrink-0" />
+                      <span className="text-teal-700 font-bold uppercase text-xs">{ev['Município']}</span>
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">Município não informado</span>
+                  )}
+
+                  {ev['Bairro'] ? (
+                    <button
+                      onClick={(e) => openEntityFicha('bairro', ev['Bairro'], e)}
+                      className="text-[11px] font-semibold text-slate-600 hover:text-rose-700 hover:underline uppercase"
+                    >
+                      {ev['Bairro']}
+                    </button>
+                  ) : ev['Região'] ? (
+                    <button
+                      onClick={(e) => openEntityFicha('regiao', ev['Região'], e)}
+                      className="text-[11px] font-semibold text-slate-500 hover:text-teal-700 hover:underline uppercase"
+                    >
+                      {ev['Região']}
+                    </button>
+                  ) : null}
                 </div>
 
-                <div className="flex items-center gap-1.5 mb-2 pr-14">
-                  <span className="text-[8px] font-black uppercase tracking-wider text-[#Fdfcf0] bg-[#111111] px-2 py-0.5 border-[2px] border-[#111111]">
-                    {ev['Classe de Atividade']}
-                  </span>
-                </div>
-
-                <h3 className="font-black text-base text-[#111111] leading-tight mb-3 uppercase line-clamp-3">
-                  {ev['Título']}
-                </h3>
-
-                <div className="mt-auto space-y-1.5 border-t-[3px] border-[#111111] pt-2.5 text-[9px] font-black uppercase">
-                  <div className="flex justify-between items-center text-[#111111]">
-                    <span>🕒 {formatDate(ev['Início'])}</span>
-                    <span className="bg-[#Fdfcf0] px-1.5 py-0.5 border border-[#111111]">{ev['Duração']} min</span>
-                  </div>
-
-                  {/* Clique direto no Município abre a Ficha Territorial */}
-                  <div className="flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setFichaModal({ type: 'municipio', name: ev['Município'] }); }}
-                      className="text-left text-[#C1272D] hover:underline flex items-center gap-1 truncate max-w-full"
-                      title="Clique para abrir a Ficha Cruzada deste Município"
-                    >
-                      <span>📍 {ev['Município']}</span>
-                      {ev['Bairro'] && ev['Bairro'] !== '-' && <span className="text-[#111111]">({ev['Bairro']})</span>}
-                      <span className="bg-[#C1272D] text-[#Fdfcf0] text-[7px] px-1 ml-1">FICHA ↗</span>
-                    </button>
-                  </div>
-
-                  {ev['Articulador'] && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setFichaModal({ type: 'articulador', name: ev['Articulador'] }); }}
-                      className="text-left text-[#007D8A] hover:underline flex items-center gap-1 truncate"
-                      title="Clique para abrir a Ficha deste Articulador"
-                    >
-                      <span>🤝 {ev['Articulador']}</span>
-                      <span className="bg-[#007D8A] text-[#Fdfcf0] text-[7px] px-1">VER ↗</span>
-                    </button>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug break-words">
+                    {ev['Título']}
+                  </h3>
+                  {ev['Local'] && (
+                    <p className="text-xs text-slate-600 mt-1 break-words">
+                      📍 {ev['Local']}
+                    </p>
                   )}
                 </div>
 
-                <div className="flex justify-between items-end mt-3 gap-2">
-                  <select
-                    value={prio}
-                    onChange={(e) => { e.stopPropagation(); handleUpdateField(ev.id, 'Prioridade', e.target.value, { prioridade: e.target.value }); }}
-                    onClick={(e) => e.stopPropagation()}
-                    className={`border-[2px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 text-center ${prioBg}`}
-                  >
-                    <option value="Sem Prioridade">S/ Prioridade</option>
-                    <option value="Baixa">Baixa</option>
-                    <option value="Média">Média</option>
-                    <option value="Alta">Alta</option>
-                  </select>
-                  <select
-                    value={ev['STATUS'] || 'Pendente'}
-                    onChange={(e) => { e.stopPropagation(); handleUpdateField(ev.id, 'STATUS', e.target.value, { status: e.target.value }); }}
-                    onClick={(e) => e.stopPropagation()}
-                    className={`border-[2px] border-[#111111] px-1 py-1 text-[8px] font-black uppercase outline-none cursor-pointer flex-1 text-center ${
-                      ev['STATUS'] === 'Confirmado' ? 'bg-[#007D8A] text-[#Fdfcf0]' : ev['STATUS'] === 'Realizado' ? 'bg-[#EAA221] text-[#111111]' : 'bg-[#ffffff] text-[#111111]'
-                    }`}
-                  >
-                    <option value="Pendente">Pendente</option>
-                    <option value="Confirmado">Confirmado</option>
-                    <option value="Realizado">Realizado</option>
-                  </select>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="bg-[#ffffff] border-[4px] border-[#111111] shadow-[8px_8px_0px_0px_#111111] overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="text-[9px] text-[#Fdfcf0] uppercase bg-[#111111]">
-              <tr>
-                <th className="px-3 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Data</th>
-                <th className="px-3 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Título</th>
-                <th className="px-3 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Classe</th>
-                <th className="px-3 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Município (Ficha)</th>
-                <th className="px-3 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Bairro / Região</th>
-                <th className="px-3 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Articulador</th>
-                <th className="px-3 py-3 font-black border-b-[3px] border-[#Fdfcf0]">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEvents.map((ev, i) => (
-                <tr key={ev.id || i} onClick={() => setSelectedEvent(ev)} className="border-b-[2px] border-[#111111] hover:bg-[#Fdfcf0] cursor-pointer text-[10px]">
-                  <td className="px-3 py-2.5 font-bold whitespace-nowrap">{formatDate(ev['Início'])}</td>
-                  <td className="px-3 py-2.5 font-black uppercase max-w-[260px] truncate" title={ev['Título']}>{ev['Título']}</td>
-                  <td className="px-3 py-2.5 font-black uppercase text-[8px]"><span className="bg-[#111111] text-[#Fdfcf0] px-1.5 py-0.5">{ev['Classe de Atividade']}</span></td>
-                  <td className="px-3 py-2.5 font-black uppercase">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setFichaModal({ type: 'municipio', name: ev['Município'] }); }}
-                      className="text-[#C1272D] hover:underline flex items-center gap-1"
-                    >
-                      {ev['Município']} <span className="text-[7px] bg-[#C1272D] text-[#Fdfcf0] px-1">FICHA</span>
-                    </button>
-                  </td>
-                  <td className="px-3 py-2.5 font-bold uppercase text-[9px]">
-                    {ev['Bairro'] !== '-' ? `${ev['Bairro']} (${ev['Distrito']})` : ev['Região SC']}
-                  </td>
-                  <td className="px-3 py-2.5 font-black uppercase">
+                <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase text-slate-400 mr-1">Articulador:</span>
                     {ev['Articulador'] ? (
                       <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setFichaModal({ type: 'articulador', name: ev['Articulador'] }); }}
-                        className="text-[#007D8A] hover:underline"
+                        onClick={(e) => openEntityFicha('articulador', ev['Articulador'], e)}
+                        className="font-semibold text-rose-700 hover:underline uppercase"
                       >
                         {ev['Articulador']}
                       </button>
                     ) : '-'}
-                  </td>
-                  <td className="px-3 py-2.5 font-black uppercase text-[8px]">{ev['STATUS']}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <span>⏱️ {ev['Duração'] || 0} min</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 border-t border-slate-200 px-3.5 py-2 flex justify-between items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <select
+                  value={ev['Prioridade'] || 'Sem Prioridade'}
+                  onChange={(e) => handleUpdatePriority(ev.id, e.target.value)}
+                  className={`flex-1 text-center border px-2 py-1 text-[10px] font-semibold uppercase cursor-pointer focus:outline-none ${getPrioridadeClasses(ev['Prioridade'])}`}
+                >
+                  <option value="Sem Prioridade">Sem Prioridade</option>
+                  <option value="Baixa">Prioridade Baixa</option>
+                  <option value="Média">Prioridade Média</option>
+                  <option value="Alta">Prioridade Alta</option>
+                </select>
+
+                <select
+                  value={ev['STATUS'] || 'Pendente'}
+                  onChange={(e) => handleUpdateStatus(ev.id, e.target.value)}
+                  className={`flex-1 text-center border px-2 py-1 text-[10px] font-semibold uppercase cursor-pointer focus:outline-none ${getStatusClasses(ev['STATUS'])}`}
+                >
+                  <option value="Pendente">Pendente</option>
+                  <option value="Confirmado">Confirmado</option>
+                  <option value="Realizado">Realizado</option>
+                </select>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+
+        {totalCards > 0 && <PaginationBar />}
+      </div>
+    );
+  };
+
+  const ListView = () => (
+    <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-4 animate-in fade-in">
+      {renderAgendasTableOrCards(filteredAndSortedEvents, sortConfig, requestSort, viewMode)}
     </div>
   );
 
-  // ==========================================
-  // ABA 2: FICHAS & CRUZAMENTOS TERRITORIAIS (EXPLORADOR DE MUNICÍPIOS)
-  // ==========================================
-  const renderFichasExplorer = () => {
-    const munStatsList = dashboardStats.municipiosRanking;
+  // ============================================================================
+  // FICHA INTERATIVA DE CRUZAMENTO DE DADOS (PADRÃO TABULUM - EMENDAS)
+  // ============================================================================
+  const EntityProfileView = () => {
+    const [fichaSearch, setFichaSearch] = useState('');
+    const [fichaSortConfig, setFichaSortConfig] = useState({ key: 'Início', direction: 'desc' });
+    const [crossSortByDim, setCrossSortByDim] = useState({});
+
+    if (!selectedEntityFicha) return null;
+    const { type, value } = selectedEntityFicha;
+    const meta = ENTITY_TYPE_META[type] || { label: 'Categoria', plural: 'Categorias', field: type };
+
+    const baseEntityEvents = useMemo(() => {
+      return events.filter(e => {
+        const isPessoal = normalizerFilter(e['Classe de Atividade']).includes('pessoal') || normalizerFilter(e['Classe de Atividade']).includes('feriado');
+        if (!showPessoal && isPessoal) return false;
+        const cellVal = String(e[meta.field] || '').trim();
+        return cellVal.toLowerCase() === String(value).trim().toLowerCase();
+      });
+    }, [events, meta.field, value, showPessoal]);
+
+    const fichaEvents = useMemo(() => {
+      const filtered = baseEntityEvents.filter(e => {
+        const matchesGlobalSearch = searchTerm === '' || JSON.stringify(e).toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesInnerSearch = fichaSearch === '' || JSON.stringify(e).toLowerCase().includes(fichaSearch.toLowerCase());
+        return matchesGlobalSearch && matchesInnerSearch;
+      });
+      return sortEventsList(filtered, fichaSortConfig);
+    }, [baseEntityEvents, searchTerm, fichaSearch, fichaSortConfig]);
+
+    const requestFichaSort = (key) => {
+      let direction = 'asc';
+      if (fichaSortConfig && fichaSortConfig.key === key && fichaSortConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      setFichaSortConfig({ key, direction });
+    };
+
+    const totalVisitas = baseEntityEvents.length;
+    const totalPresenciais = baseEntityEvents.filter(e => e['Modalidade'] === 'Presencial').length;
+    const totalOnline = baseEntityEvents.filter(e => e['Modalidade'] === 'Online').length;
+    const totalHoras = (baseEntityEvents.reduce((acc, e) => acc + (Number(e['Duração']) || 0), 0) / 60).toFixed(1);
+
+    let lastVisitDate = null;
+    let nextVisitDate = null;
+    baseEntityEvents.forEach(ev => {
+      const d = parseLocalDate(ev['Início']);
+      if (d) {
+        if (d < getTodayStart() && (!lastVisitDate || d > lastVisitDate)) lastVisitDate = d;
+        if (d >= getTodayStart() && (!nextVisitDate || d < nextVisitDate)) nextVisitDate = d;
+      }
+    });
+
+    const buildBreakdown = (dimType) => {
+      const dimMeta = ENTITY_TYPE_META[dimType];
+      const map = {};
+      baseEntityEvents.forEach(e => {
+        const raw = String(e[dimMeta.field] || '').trim();
+        const key = raw || 'Não informado';
+        if (!map[key]) {
+          map[key] = { name: key, isValid: Boolean(raw), count: 0, presenciais: 0, horas: 0 };
+        }
+        map[key].count += 1;
+        if (e['Modalidade'] === 'Presencial') map[key].presenciais += 1;
+        map[key].horas += (Number(e['Duração']) || 0) / 60;
+      });
+
+      const items = Object.values(map);
+      const sortConf = crossSortByDim[dimType] || { key: 'count', direction: 'desc' };
+
+      items.sort((a, b) => {
+        if (sortConf.key === 'name') {
+          const cmp = a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base', numeric: true });
+          return sortConf.direction === 'asc' ? cmp : -cmp;
+        }
+        const diff = a[sortConf.key] - b[sortConf.key];
+        return sortConf.direction === 'asc' ? diff : -diff;
+      });
+
+      return items;
+    };
+
+    const toggleCrossSort = (dimType, key) => {
+      setCrossSortByDim(prev => {
+        const current = prev[dimType] || { key: 'count', direction: 'desc' };
+        const nextDir = current.key === key && current.direction === 'desc' ? 'asc' : 'desc';
+        return { ...prev, [dimType]: { key, direction: nextDir } };
+      });
+    };
+
+    const crossDimensions = [
+      'classe',
+      'articulador',
+      'municipio',
+      'regiao',
+      'bairro',
+      'status',
+      'prioridade',
+      'modalidade',
+      'mes_ano'
+    ].filter(d => d !== type);
+
+    const uniqueCounts = {
+      municipios: new Set(baseEntityEvents.map(e => e['Município']).filter(Boolean)).size,
+      regioes: new Set(baseEntityEvents.map(e => e['Região']).filter(Boolean)).size,
+      articuladores: new Set(baseEntityEvents.map(e => e['Articulador']).filter(Boolean)).size,
+      classes: new Set(baseEntityEvents.map(e => e['Classe de Atividade']).filter(Boolean)).size,
+      bairros: new Set(baseEntityEvents.map(e => e['Bairro']).filter(Boolean)).size,
+      altaPrioridade: baseEntityEvents.filter(e => e['Prioridade'] === 'Alta').length
+    };
+
     return (
-      <div className="space-y-6 pb-10">
-        <div className="bg-[#ffffff] border-[4px] border-[#111111] p-5 shadow-[6px_6px_0px_0px_#111111] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-xl font-black uppercase tracking-tight">Diretório de Fichas Municipais & Articuladores</h2>
-            <p className="text-[10px] font-bold uppercase text-[#007D8A] mt-1">
-              Clique em qualquer Município ou Articulador para abrir o Dossiê Cruzado de visitas, horas, assessores e classes de atividade
-            </p>
+      <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-4 animate-in fade-in">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-4 print:hidden">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={goBackFromEntityFicha}
+              className="bg-slate-800 text-white px-3 py-1.5 font-semibold text-xs rounded-xs hover:bg-slate-700 flex items-center"
+            >
+              ← {entityHistory.length > 0 ? `Voltar para ${entityHistory[entityHistory.length - 1].value}` : 'Voltar ao Painel'}
+            </button>
+            <button
+              onClick={() => applyEntityFilterToMainList(type, value)}
+              className="bg-amber-200 text-slate-900 px-3 py-1.5 font-semibold text-xs border border-slate-300 rounded-xs hover:bg-amber-300 flex items-center"
+            >
+              <FilterIcon className="w-3.5 h-3.5 mr-1.5" /> Aplicar como Filtro no Painel
+            </button>
           </div>
-          <span className="bg-[#C1272D] text-[#Fdfcf0] px-4 py-2 font-black text-xs uppercase border-[3px] border-[#111111]">
-            {munStatsList.length} MUNICÍPIOS COM REGISTRO
-          </span>
+
+          <div className="relative w-56">
+            <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder={`Filtrar em ${value}...`}
+              value={fichaSearch}
+              onChange={(e) => setFichaSearch(e.target.value)}
+              className="w-full pl-8 pr-2.5 py-1 bg-white border border-slate-300 rounded-xs text-xs focus:outline-none focus:border-teal-700"
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {munStatsList.map((m, idx) => {
-            const reg = SC_REGION_MAP[normalizerFilter(m.name)] || 'SANTA CATARINA';
-            return (
-              <div
-                key={idx}
-                onClick={() => setFichaModal({ type: 'municipio', name: m.name })}
-                className="bg-[#ffffff] border-[4px] border-[#111111] p-4 shadow-[5px_5px_0px_0px_#111111] hover:bg-[#EAA221] hover:-translate-y-1 transition-all cursor-pointer flex flex-col justify-between"
-              >
-                <div>
-                  <span className="text-[8px] font-black uppercase bg-[#111111] text-[#Fdfcf0] px-2 py-0.5">{reg}</span>
-                  <h3 className="text-base font-black uppercase mt-2 text-[#111111]">{m.name}</h3>
-                </div>
-                <div className="mt-4 pt-2 border-t-[2px] border-[#111111] flex justify-between items-end">
-                  <span className="text-[9px] font-black uppercase text-[#007D8A]">Abrir Ficha Cruzada ↗</span>
-                  <span className="text-lg font-black text-[#C1272D] leading-none">{m.value} <small className="text-[8px]">agendas</small></span>
-                </div>
+        <div className="bg-white border border-slate-300 shadow-xs mb-5">
+          <div className="bg-teal-700 border-b border-slate-300 p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div>
+              <span className="inline-block bg-amber-300 text-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                Ficha de {meta.label}
+              </span>
+              <h1 className="text-xl sm:text-3xl font-bold text-white uppercase tracking-tight break-words">
+                {value}
+              </h1>
+            </div>
+            <div className="bg-white border border-slate-300 px-3.5 py-2 text-right rounded-xs">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Total de Visitas / Agendas</span>
+              <span className="text-xl font-bold text-rose-700">{totalVisitas}</span>
+            </div>
+          </div>
+
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border-b border-slate-200 bg-slate-50/50">
+            <div className="bg-white border border-slate-200 p-3.5">
+              <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Presenciais vs. Online</p>
+              <p className="text-lg sm:text-xl font-bold text-slate-900">{totalPresenciais} presenciais</p>
+              <p className="text-[11px] font-medium text-teal-700 mt-0.5">{totalOnline} agendas online</p>
+            </div>
+            <div className="bg-white border border-slate-200 p-3.5">
+              <p className="text-[10px] font-bold uppercase text-teal-700 mb-1">Tempo Total Dedicado</p>
+              <p className="text-lg sm:text-xl font-bold text-teal-700">{totalHoras} horas</p>
+              <p className="text-[11px] font-medium text-slate-500 mt-0.5">Soma de duração das agendas</p>
+            </div>
+            <div className="bg-white border border-slate-200 p-3.5">
+              <p className="text-[10px] font-bold uppercase text-rose-700 mb-1">Histórico de Presença</p>
+              <p className="text-xs font-bold text-slate-900">Última: <span className="text-rose-700">{lastVisitDate ? formatDate(lastVisitDate) : 'Sem registro'}</span></p>
+              <p className="text-xs font-bold text-slate-900 mt-1">Próxima: <span className="text-teal-700">{nextVisitDate ? formatDate(nextVisitDate) : 'Nenhuma agendada'}</span></p>
+            </div>
+            <div className="bg-amber-50/80 border border-amber-200 p-3.5 flex flex-col justify-between">
+              <p className="text-[10px] font-bold uppercase text-slate-700 mb-1">Resumo de Vínculos</p>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] font-medium text-slate-800">
+                <span>Municípios: <strong>{uniqueCounts.municipios}</strong></span>
+                <span>Regiões: <strong>{uniqueCounts.regioes}</strong></span>
+                <span>Articuladores: <strong>{uniqueCounts.articuladores}</strong></span>
+                <span>Classes: <strong>{uniqueCounts.classes}</strong></span>
+                <span>Bairros: <strong>{uniqueCounts.bairros}</strong></span>
+                <span>Alta Prior.: <strong className="text-rose-700">{uniqueCounts.altaPrioridade}</strong></span>
               </div>
+            </div>
+          </div>
+
+          <div className="p-4">
+            <h2 className="text-xs sm:text-sm font-bold uppercase text-slate-800 tracking-wider mb-3 flex items-center">
+              <span className="w-2 h-4 bg-rose-700 mr-2"></span>
+              Cruzamento de Dados ({value}) — Clique nos títulos para ordenar ou em qualquer item para abrir sua Ficha
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {crossDimensions.map(dimKey => {
+                const dimMeta = ENTITY_TYPE_META[dimKey];
+                const rows = buildBreakdown(dimKey);
+                if (dimKey === 'bairro' && rows.filter(r => r.isValid).length === 0) return null;
+                const sortConf = crossSortByDim[dimKey] || { key: 'count', direction: 'desc' };
+
+                const CrossSortHeader = ({ label, colKey, align = 'left' }) => {
+                  const active = sortConf.key === colKey;
+                  return (
+                    <th
+                      onClick={() => toggleCrossSort(dimKey, colKey)}
+                      className={`py-1.5 px-2 text-[10px] font-bold uppercase text-slate-700 cursor-pointer hover:bg-amber-200/60 select-none border-b border-slate-300 ${
+                        align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-0.5">
+                        {label}
+                        {active && (sortConf.direction === 'asc' ? ' ▲' : ' ▼')}
+                      </span>
+                    </th>
+                  );
+                };
+
+                return (
+                  <div key={dimKey} className="border border-slate-300 bg-white flex flex-col">
+                    <div className="bg-amber-100/90 border-b border-slate-300 px-3 py-1.5 flex justify-between items-center">
+                      <span className="font-bold text-xs uppercase text-slate-800">{dimMeta.plural}</span>
+                      <span className="bg-white border border-slate-300 px-1.5 py-0.2 text-[10px] font-semibold text-slate-700">
+                        {rows.filter(r => r.isValid).length}
+                      </span>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto flex-1">
+                      <table className="w-full border-collapse text-xs">
+                        <thead className="bg-slate-50 sticky top-0 z-10">
+                          <tr>
+                            <CrossSortHeader label={dimMeta.label} colKey="name" align="left" />
+                            <CrossSortHeader label="Visitas" colKey="count" align="center" />
+                            <CrossSortHeader label="Pres." colKey="presenciais" align="center" />
+                            <CrossSortHeader label="Horas" colKey="horas" align="right" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {rows.map((item, i) => (
+                            <tr
+                              key={i}
+                              onClick={() => item.isValid && openEntityFicha(dimKey, item.name)}
+                              className={item.isValid ? "hover:bg-teal-50/70 cursor-pointer transition-colors" : "text-slate-400 italic"}
+                            >
+                              <td className="py-1.5 px-2 font-medium text-[11px] text-teal-800 hover:underline whitespace-normal break-words">
+                                {item.name}
+                              </td>
+                              <td className="py-1.5 px-2 text-center font-bold text-[11px] text-rose-700">
+                                {item.count}
+                              </td>
+                              <td className="py-1.5 px-2 text-center font-semibold text-[11px] text-slate-700">
+                                {item.presenciais}
+                              </td>
+                              <td className="py-1.5 px-2 text-right font-medium text-[11px] text-slate-800 whitespace-nowrap">
+                                {item.horas.toFixed(1)}h
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {renderAgendasTableOrCards(fichaEvents, fichaSortConfig, requestFichaSort, viewMode)}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // DASHBOARD E MAPA VETORIAL LIMPO (PADRÃO TABULUM - EMENDAS)
+  // ============================================================================
+  const DashboardView = () => {
+    const [hoveredMuni, setHoveredMuni] = useState(null);
+    const [mapMetric, setMapMetric] = useState('visitas'); // 'visitas' | 'horas'
+
+    const totalAgendas = filteredAndSortedEvents.length;
+    const totalHorasGlobal = (filteredAndSortedEvents.reduce((acc, ev) => acc + (Number(ev['Duração']) || 0), 0) / 60).toFixed(1);
+    const totalMunicipiosVisitados = new Set(filteredAndSortedEvents.map(ev => ev['Município']).filter(Boolean)).size;
+
+    const buildGroupStats = (field, ignoreList = []) => {
+      const acc = {};
+      filteredAndSortedEvents.forEach(ev => {
+        const key = String(ev[field] || '').trim();
+        if (!key || ignoreList.includes(normalizerFilter(key))) return;
+        if (!acc[key]) acc[key] = { key, count: 0, horas: 0 };
+        acc[key].count += 1;
+        acc[key].horas += (Number(ev['Duração']) || 0) / 60;
+      });
+      return Object.values(acc).sort((a, b) => b.count - a.count);
+    };
+
+    const classesData = buildGroupStats('Classe de Atividade', ['outros eventos']);
+    const regioesData = buildGroupStats('Região');
+    const articuladoresData = buildGroupStats('Articulador');
+    const bairrosFloripaData = buildGroupStats('Bairro', ['centro / nao especificado', 'digital / online']);
+
+    // Evolução Mensal no formato de colunas verticais limpas do TABULUM - Emendas
+    const timelineMensalData = useMemo(() => {
+      const map = {};
+      filteredAndSortedEvents.forEach(ev => {
+        const sortKey = ev['_SORT_MES'];
+        const label = ev['MES_ANO'];
+        if (!sortKey || !label) return;
+        if (!map[sortKey]) map[sortKey] = { sortKey, label, count: 0, horas: 0 };
+        map[sortKey].count += 1;
+        map[sortKey].horas += (Number(ev['Duração']) || 0) / 60;
+      });
+      return Object.values(map).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    }, [filteredAndSortedEvents]);
+
+    const agendasPorMuni = useMemo(() => {
+      const map = {};
+      filteredAndSortedEvents.forEach(ev => {
+        const mName = normalizeStr(ev['Município']);
+        if (mName) {
+          if (!map[mName]) map[mName] = { count: 0, horas: 0 };
+          map[mName].count += 1;
+          map[mName].horas += (Number(ev['Duração']) || 0) / 60;
+        }
+      });
+      return map;
+    }, [filteredAndSortedEvents]);
+
+    // Cores Mondrian Suaves no Mapa Vetorial (Branco, Amarelo, Azul-Esverdeado, Carmesim)
+    const getMuniColor = (muniStats) => {
+      if (!muniStats || muniStats.count === 0) return '#ffffff';
+      if (mapMetric === 'horas') {
+        const h = muniStats.horas;
+        if (h <= 4) return '#fcd34d';   // Amarelo Mondrian
+        if (h <= 15) return '#007D8A';  // Azul-Esverdeado Mondrian
+        return '#be123c';               // Carmesim Mondrian
+      }
+      const qtd = muniStats.count;
+      if (qtd <= 2) return '#fcd34d';
+      if (qtd <= 8) return '#007D8A';
+      return '#be123c';
+    };
+
+    const renderMap = () => {
+      if (!mapGeoJson) return <div className="p-8 text-center font-medium text-slate-500">Carregando Mapa de Santa Catarina...</div>;
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      mapGeoJson.features.forEach(f => {
+        const processRings = (rings) => {
+          rings.forEach(ring => ring.forEach(coord => {
+            if (coord[0] < minX) minX = coord[0];
+            if (coord[0] > maxX) maxX = coord[0];
+            if (coord[1] < minY) minY = coord[1];
+            if (coord[1] > maxY) maxY = coord[1];
+          }));
+        };
+        if (f.geometry.type === 'Polygon') processRings(f.geometry.coordinates);
+        else if (f.geometry.type === 'MultiPolygon') f.geometry.coordinates.forEach(processRings);
+      });
+
+      const mapWidth = 800; const mapHeight = 580;
+      const scaleX = mapWidth / (maxX - minX);
+      const scaleY = mapHeight / (maxY - minY);
+      const scale = Math.min(scaleX, scaleY) * 0.95;
+
+      const offsetX = (mapWidth - (maxX - minX) * scale) / 2;
+      const offsetY = (mapHeight - (maxY - minY) * scale) / 2;
+
+      const project = (coord) => {
+        const x = (coord[0] - minX) * scale + offsetX;
+        const y = mapHeight - ((coord[1] - minY) * scale) - offsetY;
+        return `${x},${y}`;
+      };
+
+      const generatePath = (geometry) => {
+        const createString = (rings) => rings.map(ring => "M" + ring.map(coord => project(coord)).join("L") + "Z").join(" ");
+        if (geometry.type === 'Polygon') return createString(geometry.coordinates);
+        if (geometry.type === 'MultiPolygon') return geometry.coordinates.map(createString).join(" ");
+        return "";
+      };
+
+      return (
+        <svg
+          viewBox={`0 0 ${mapWidth} ${mapHeight}`}
+          className="w-full h-auto select-none"
+          onClick={() => setHoveredMuni(null)}
+        >
+          {mapGeoJson.features.map((feature, i) => {
+            const mName = normalizeStr(feature.properties.name);
+            const stats = agendasPorMuni[mName] || { count: 0, horas: 0 };
+            return (
+              <path
+                key={i}
+                d={generatePath(feature.geometry)}
+                fill={getMuniColor(stats)}
+                stroke="#334155"
+                strokeWidth="0.75"
+                className="hover:stroke-[2.2px] transition-all cursor-pointer relative"
+                onMouseEnter={(e) => {
+                  setHoveredMuni({
+                    name: feature.properties.name,
+                    count: stats.count,
+                    horas: stats.horas,
+                    x: e.clientX,
+                    y: e.clientY,
+                    isTouch: false
+                  });
+                }}
+                onMouseMove={(e) => {
+                  setHoveredMuni(prev => prev && !prev.isTouch ? {
+                    ...prev,
+                    x: e.clientX,
+                    y: e.clientY
+                  } : prev);
+                }}
+                onMouseLeave={() => {
+                  setHoveredMuni(prev => (prev && !prev.isTouch ? null : prev));
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  const touch = e.touches && e.touches[0];
+                  setHoveredMuni({
+                    name: feature.properties.name,
+                    count: stats.count,
+                    horas: stats.horas,
+                    x: touch ? touch.clientX : 180,
+                    y: touch ? touch.clientY : 240,
+                    isTouch: true
+                  });
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEntityFicha('municipio', feature.properties.name);
+                }}
+              />
             );
           })}
+        </svg>
+      );
+    };
+
+    return (
+      <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-4 animate-in fade-in space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Coluna Esquerda: Card Resumo + Barras por Classe, Região e Articulador */}
+          <div className="lg:col-span-1 space-y-5">
+            <div className="bg-amber-200/90 border border-slate-400 p-4 shadow-xs flex flex-col justify-center">
+              <div className="flex justify-between items-center border-b border-slate-500/40 pb-2 mb-2.5">
+                <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                  Total no Filtro
+                </p>
+                <span className="bg-white border border-slate-400 px-2 py-0.5 text-[11px] font-bold text-rose-700 uppercase">
+                  {totalMunicipiosVisitados} {totalMunicipiosVisitados === 1 ? 'município' : 'municípios'}
+                </span>
+              </div>
+              <h2 className="text-2xl xl:text-3xl font-black text-slate-900 leading-none">
+                {totalAgendas} {totalAgendas === 1 ? 'agenda' : 'agendas'}
+              </h2>
+              <div className="mt-2.5 pt-2 border-t border-slate-500/30 flex justify-between items-baseline">
+                <span className="text-[11px] font-semibold uppercase text-slate-800">Tempo Dedicado:</span>
+                <span className="text-sm font-bold text-teal-900">{totalHorasGlobal} horas</span>
+              </div>
+            </div>
+
+            {/* Por Classe de Atividade */}
+            <div className="bg-white border border-slate-300 p-4 shadow-xs">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3.5">
+                <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                  Por Classe de Atividade ({classesData.length})
+                </p>
+                <span className="text-[10px] font-semibold uppercase text-slate-400">Agendas • Horas</span>
+              </div>
+              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                {classesData.length > 0 ? classesData.map((d) => {
+                  const maxVal = Math.max(...classesData.map(r => r.count), 1);
+                  const pct = Math.max((d.count / maxVal) * 100, 4);
+                  return (
+                    <div key={d.key} className="cursor-pointer group" onClick={() => openEntityFicha('classe', d.key)}>
+                      <div className="flex justify-between items-baseline text-[11px] font-semibold uppercase mb-1 text-slate-800 group-hover:text-rose-700">
+                        <span className="truncate pr-2" title={d.key}>{d.key}</span>
+                        <span className="whitespace-nowrap">
+                          <strong className="text-rose-700">{d.count} ag.</strong> • {d.horas.toFixed(1)}h
+                        </span>
+                      </div>
+                      <div className="h-3 w-full bg-slate-100 border border-slate-300">
+                        <div className="h-full bg-rose-700" style={{ width: `${pct}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                }) : <p className="text-xs text-slate-400 uppercase">Sem dados.</p>}
+              </div>
+            </div>
+
+            {/* Por Região de SC */}
+            <div className="bg-white border border-slate-300 p-4 shadow-xs">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3.5">
+                <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                  Por Região de SC ({regioesData.length})
+                </p>
+                <span className="text-[10px] font-semibold uppercase text-slate-400">Visitas • Horas</span>
+              </div>
+              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                {regioesData.length > 0 ? regioesData.map((d) => {
+                  const maxVal = Math.max(...regioesData.map(r => r.count), 1);
+                  const pct = Math.max((d.count / maxVal) * 100, 4);
+                  return (
+                    <div key={d.key} className="cursor-pointer group" onClick={() => openEntityFicha('regiao', d.key)}>
+                      <div className="flex justify-between items-baseline text-[11px] font-semibold uppercase mb-1 text-slate-800 group-hover:text-teal-700">
+                        <span className="truncate pr-2" title={d.key}>{d.key}</span>
+                        <span className="whitespace-nowrap">
+                          <strong className="text-teal-700">{d.count} ag.</strong> • {d.horas.toFixed(1)}h
+                        </span>
+                      </div>
+                      <div className="h-3 w-full bg-slate-100 border border-slate-300">
+                        <div className="h-full bg-teal-700" style={{ width: `${pct}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                }) : <p className="text-xs text-slate-400 uppercase">Sem dados.</p>}
+              </div>
+            </div>
+
+            {/* Por Articulador */}
+            <div className="bg-white border border-slate-300 p-4 shadow-xs">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3.5">
+                <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                  Por Articulador ({articuladoresData.length})
+                </p>
+                <span className="text-[10px] font-semibold uppercase text-slate-400">Agendas • Horas</span>
+              </div>
+              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                {articuladoresData.length > 0 ? articuladoresData.map((d) => {
+                  const maxVal = Math.max(...articuladoresData.map(r => r.count), 1);
+                  const pct = Math.max((d.count / maxVal) * 100, 4);
+                  return (
+                    <div key={d.key} className="cursor-pointer group" onClick={() => openEntityFicha('articulador', d.key)}>
+                      <div className="flex justify-between items-baseline text-[11px] font-semibold uppercase mb-1 text-slate-800 group-hover:text-rose-700">
+                        <span className="truncate pr-2">{d.key}</span>
+                        <span className="whitespace-nowrap">
+                          <strong className="text-rose-700">{d.count} ag.</strong> • {d.horas.toFixed(1)}h
+                        </span>
+                      </div>
+                      <div className="h-3 w-full bg-slate-100 border border-slate-300">
+                        <div className="h-full bg-amber-400" style={{ width: `${pct}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                }) : <p className="text-xs text-slate-400 uppercase">Sem dados.</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna Direita (2/3): Mapa Vetorial Limpo de SC + Evolução Mensal em Colunas + Bairros de Florianópolis */}
+          <div className="lg:col-span-2 space-y-5 self-start">
+            {/* Mapa de Santa Catarina no padrão TABULUM - Emendas */}
+            <div className="bg-white border border-slate-300 shadow-xs flex flex-col relative overflow-hidden">
+              <div className="bg-teal-700 border-b border-slate-300 p-3 flex flex-wrap justify-between items-center gap-3 z-10">
+                <p className="text-white font-bold uppercase text-xs sm:text-sm tracking-wider flex items-center">
+                  <MapPinIcon className="h-4 w-4 mr-1.5" /> Mapa de Presença em Santa Catarina
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex border border-slate-800 bg-white rounded-xs overflow-hidden">
+                    <button
+                      onClick={() => setMapMetric('visitas')}
+                      className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-colors border-r border-slate-300 ${
+                        mapMetric === 'visitas' ? 'bg-amber-300 text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Por Visitas (Nº)
+                    </button>
+                    <button
+                      onClick={() => setMapMetric('horas')}
+                      className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-colors ${
+                        mapMetric === 'horas' ? 'bg-amber-300 text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Por Horas (h)
+                    </button>
+                  </div>
+
+                  {mapMetric === 'visitas' ? (
+                    <div className="flex space-x-2 text-[10px] font-semibold uppercase text-white items-center">
+                      <div className="w-3 h-3 bg-amber-300 border border-slate-900"></div> <span>1–2 vis.</span>
+                      <div className="w-3 h-3 bg-[#007D8A] border border-white ml-1.5"></div> <span>3–8 vis.</span>
+                      <div className="w-3 h-3 bg-rose-700 border border-white ml-1.5"></div> <span>9+ vis.</span>
+                    </div>
+                  ) : (
+                    <div className="flex space-x-2 text-[10px] font-semibold uppercase text-white items-center">
+                      <div className="w-3 h-3 bg-amber-300 border border-slate-900"></div> <span>Até 4h</span>
+                      <div className="w-3 h-3 bg-[#007D8A] border border-white ml-1.5"></div> <span>4h–15h</span>
+                      <div className="w-3 h-3 bg-rose-700 border border-white ml-1.5"></div> <span>+15h</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-2 sm:p-4 bg-white relative flex flex-col items-center justify-center">
+                {renderMap()}
+
+                {hoveredMuni && (
+                  <div
+                    className={`${
+                      hoveredMuni.isTouch
+                        ? 'sticky bottom-2 left-2 right-2 w-full max-w-sm mx-auto mt-2'
+                        : 'fixed pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px]'
+                    } bg-white border border-slate-800 p-3 shadow-md z-50`}
+                    style={!hoveredMuni.isTouch ? { left: hoveredMuni.x, top: hoveredMuni.y } : {}}
+                  >
+                    <div className="flex justify-between items-start gap-3">
+                      <p className="font-bold text-rose-700 text-xs sm:text-sm uppercase">{hoveredMuni.name}</p>
+                      {hoveredMuni.isTouch && (
+                        <button onClick={() => setHoveredMuni(null)} className="text-slate-400 hover:text-slate-800 p-0.5">
+                          <XIcon className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {hoveredMuni.count > 0 ? (
+                      <div className="mt-1 space-y-0.5">
+                        <p className="font-semibold text-xs text-teal-800">
+                          Visitas / Agendas: <strong>{hoveredMuni.count}</strong>
+                        </p>
+                        <p className="font-bold text-xs text-slate-900">
+                          Tempo dedicado: {hoveredMuni.horas.toFixed(1)}h
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 mt-1">Nenhuma visita no filtro atual</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Gráfico de Evolução Mensal das Agendas (Colunas Verticais Limpas no padrão TABULUM - Emendas) */}
+            <div className="bg-white border border-slate-300 p-4 shadow-xs">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-4">
+                <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                  Evolução Mensal das Agendas
+                </p>
+                <span className="text-[10px] font-semibold uppercase text-slate-400">
+                  Clique na coluna de um mês para abrir sua Ficha
+                </span>
+              </div>
+
+              <div className="overflow-x-auto pb-1">
+                <div className="flex items-end h-44 space-x-2.5 border-b border-l border-slate-300 px-3 pt-8 pb-2 min-w-[480px]">
+                  {timelineMensalData.length > 0 ? timelineMensalData.map((d) => {
+                    const maxVal = Math.max(...timelineMensalData.map(r => r.count), 1);
+                    const pct = Math.max((d.count / maxVal) * 100, 6);
+                    return (
+                      <div
+                        key={d.sortKey}
+                        onClick={() => openEntityFicha('mes_ano', d.label)}
+                        className="flex-1 min-w-[38px] flex flex-col items-center group relative h-full justify-end cursor-pointer"
+                      >
+                        <div className="opacity-0 group-hover:opacity-100 absolute -top-7 bg-slate-900 text-white text-[10px] font-medium px-2 py-0.5 pointer-events-none whitespace-nowrap z-10 rounded-xs shadow-xs">
+                          {d.label}: {d.count} ag. • {d.horas.toFixed(1)}h
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-700 mb-1">{d.count}</span>
+                        <div
+                          className="w-full max-w-[36px] bg-teal-700 border border-slate-700 transition-all group-hover:bg-amber-300"
+                          style={{ height: `${pct}%` }}
+                        ></div>
+                        <span className="text-[10px] font-bold mt-1.5 text-slate-800 whitespace-nowrap">{d.label}</span>
+                      </div>
+                    );
+                  }) : (
+                    <p className="text-xs text-slate-400 uppercase self-center w-full text-center">Sem dados no período.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Presença por Bairros de Florianópolis (56 Bairros REPLAN) */}
+            {bairrosFloripaData.length > 0 && (
+              <div className="bg-white border border-slate-300 p-4 shadow-xs">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3.5">
+                  <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                    Presença nos Bairros de Florianópolis ({bairrosFloripaData.length} bairros identificados)
+                  </p>
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Clique para abrir a Ficha do Bairro</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  {bairrosFloripaData.map((d) => {
+                    const maxVal = Math.max(...bairrosFloripaData.map(r => r.count), 1);
+                    const pct = Math.max((d.count / maxVal) * 100, 5);
+                    return (
+                      <div key={d.key} className="cursor-pointer group" onClick={() => openEntityFicha('bairro', d.key)}>
+                        <div className="flex justify-between items-baseline text-[11px] font-semibold uppercase mb-1 text-slate-800 group-hover:text-rose-700">
+                          <span className="truncate pr-2">{d.key}</span>
+                          <span className="whitespace-nowrap">
+                            <strong className="text-rose-700">{d.count} ag.</strong> • {d.horas.toFixed(1)}h
+                          </span>
+                        </div>
+                        <div className="h-2.5 w-full bg-slate-100 border border-slate-300">
+                          <div className="h-full bg-rose-700" style={{ width: `${pct}%` }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
-  // ==========================================
-  // ABA 3: DASHBOARD E MAPAS DE PRECISÃO
-  // ==========================================
-  const renderDashboard = () => (
-    <div className="space-y-8 pb-10">
-      {/* KPIs de Precisão */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-[#ffffff] border-[4px] border-[#111111] p-4 shadow-[5px_5px_0px_0px_#111111]">
-          <span className="text-[8px] font-black uppercase text-[#111111] opacity-70">Total de Agendas</span>
-          <p className="text-2xl font-black text-[#C1272D] mt-1">{filteredEvents.length}</p>
+  // ============================================================================
+  // FICHA INDIVIDUAL DE DETALHE DO COMPROMISSO (PADRÃO TABULUM - EMENDAS)
+  // ============================================================================
+  const DetailView = () => {
+    if (!selectedEvent) return null;
+    const data = selectedEvent;
+
+    const InfoField = ({ label, value, icon: IconComponent, entityType = null, color = 'teal' }) => {
+      const colorClass =
+        color === 'teal' ? 'text-teal-700' :
+        color === 'red' ? 'text-rose-700' :
+        color === 'yellow' ? 'text-amber-700' : 'text-slate-700';
+
+      return (
+        <div className="mb-3 bg-white p-3 border border-slate-200 relative">
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1 flex items-center ${colorClass}`}>
+            {IconComponent && <IconComponent className="h-3.5 w-3.5 mr-1" />} {label}
+          </label>
+          <div className="text-slate-900 font-medium text-sm break-words flex items-center justify-between gap-2">
+            {entityType && value ? (
+              <button
+                onClick={(e) => openEntityFicha(entityType, value, e)}
+                className="font-semibold text-left hover:text-rose-700 hover:underline"
+              >
+                {value}
+              </button>
+            ) : (
+              <span>{value || <span className="text-slate-400 italic">Não informado</span>}</span>
+            )}
+            {entityType && value && (
+              <button
+                onClick={(e) => openEntityFicha(entityType, value, e)}
+                className="text-[10px] bg-amber-100 text-slate-800 border border-slate-300 px-1.5 py-0.5 uppercase font-semibold hover:bg-amber-200 flex-shrink-0"
+              >
+                Abrir Ficha
+              </button>
+            )}
+          </div>
         </div>
-        <div className="bg-[#ffffff] border-[4px] border-[#111111] p-4 shadow-[5px_5px_0px_0px_#111111]">
-          <span className="text-[8px] font-black uppercase text-[#111111] opacity-70">Horas Dedicadas</span>
-          <p className="text-2xl font-black text-[#007D8A] mt-1">{dashboardStats.totalHours}h</p>
-        </div>
-        <div className="bg-[#ffffff] border-[4px] border-[#111111] p-4 shadow-[5px_5px_0px_0px_#111111]">
-          <span className="text-[8px] font-black uppercase text-[#111111] opacity-70">Agendas Presenciais</span>
-          <p className="text-2xl font-black text-[#111111] mt-1">{dashboardStats.presenciaisCount}</p>
-        </div>
-        <div className="bg-[#ffffff] border-[4px] border-[#111111] p-4 shadow-[5px_5px_0px_0px_#111111]">
-          <span className="text-[8px] font-black uppercase text-[#111111] opacity-70">Agendas Online</span>
-          <p className="text-2xl font-black text-[#EAA221] mt-1">{dashboardStats.onlineCount}</p>
-        </div>
-        <div className="bg-[#ffffff] border-[4px] border-[#111111] p-4 shadow-[5px_5px_0px_0px_#111111]">
-          <span className="text-[8px] font-black uppercase text-[#111111] opacity-70">Municípios Visitados</span>
-          <p className="text-2xl font-black text-[#C1272D] mt-1">{dashboardStats.municipiosVisitadosCount}</p>
+      );
+    };
+
+    return (
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-5 animate-in fade-in">
+        <button
+          onClick={() => {
+            if (selectedEntityFicha) setCurrentView('entity');
+            else setCurrentView('list');
+          }}
+          className="bg-slate-800 text-white px-3.5 py-1.5 font-semibold uppercase text-xs rounded-xs hover:bg-slate-700 mb-4 flex items-center"
+        >
+          ← {selectedEntityFicha ? `Voltar para Ficha de ${selectedEntityFicha.value}` : 'Voltar ao Painel'}
+        </button>
+
+        <div className="bg-white border border-slate-300 shadow-xs">
+          <div className="bg-rose-700 border-b border-slate-300 p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div>
+              <span className="inline-block bg-amber-300 text-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                {data['Classe de Atividade']} • {data['Modalidade']}
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                {data['Título']}
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={data['Prioridade'] || 'Sem Prioridade'}
+                onChange={(e) => handleUpdatePriority(data.id, e.target.value)}
+                className={`border px-3 py-1.5 text-xs font-bold uppercase cursor-pointer ${getPrioridadeClasses(data['Prioridade'])}`}
+              >
+                <option value="Sem Prioridade">Sem Prioridade</option>
+                <option value="Baixa">Prioridade Baixa</option>
+                <option value="Média">Prioridade Média</option>
+                <option value="Alta">Prioridade Alta</option>
+              </select>
+
+              <select
+                value={data['STATUS'] || 'Pendente'}
+                onChange={(e) => handleUpdateStatus(data.id, e.target.value)}
+                className={`border px-3 py-1.5 text-xs font-bold uppercase cursor-pointer ${getStatusClasses(data['STATUS'])}`}
+              >
+                <option value="Pendente">Pendente</option>
+                <option value="Confirmado">Confirmado</option>
+                <option value="Realizado">Realizado</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2 bg-slate-50/70 border border-slate-200 p-4">
+              <div className="bg-slate-800 text-white font-bold uppercase text-xs py-1 px-2.5 inline-block mb-2">
+                Localização Territorial
+              </div>
+              <InfoField label="Município" value={data['Município']} icon={MapPinIcon} entityType="municipio" color="teal" />
+              <InfoField label="Região de SC" value={data['Região']} icon={MapIcon} entityType="regiao" color="black" />
+              {data['Bairro'] && (
+                <InfoField label="Bairro REPLAN (Florianópolis)" value={data['Bairro']} icon={MapPinIcon} entityType="bairro" color="red" />
+              )}
+              <InfoField label="Endereço / Local Físico" value={data['Local']} color="black" />
+            </div>
+
+            <div className="space-y-2 bg-slate-50/70 border border-slate-200 p-4">
+              <div className="bg-teal-700 text-white font-bold uppercase text-xs py-1 px-2.5 inline-block mb-2">
+                Articulação & Horário
+              </div>
+              <InfoField label="Data de Início" value={formatDate(data['Início'])} icon={CalendarIcon} color="teal" />
+              <InfoField label="Duração Estimada" value={`${data['Duração'] || 0} minutos`} icon={ClockIcon} color="black" />
+              <InfoField label="Classe de Atividade" value={data['Classe de Atividade']} icon={LayersIcon} entityType="classe" color="red" />
+              <InfoField label="Articulador Responsável" value={data['Articulador']} icon={UserIcon} entityType="articulador" color="red" />
+
+              <div className="bg-white p-3 border border-slate-200">
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                  Definir / Corrigir Articulador (Salva na Coluna K sem afetar fórmulas)
+                </label>
+                <input
+                  type="text"
+                  defaultValue={data['Articulador'] || ''}
+                  placeholder="Digite o nome do articulador e clique fora..."
+                  onBlur={(e) => handleUpdateArticulador(data.id, e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 focus:outline-none focus:border-teal-700"
+                />
+              </div>
+            </div>
+
+            {data['Descrição'] && (
+              <div className="col-span-1 md:col-span-2 bg-amber-50/60 border border-amber-200 p-4">
+                <div className="bg-amber-300 text-slate-900 font-bold uppercase text-xs py-1 px-2.5 inline-block mb-2">
+                  Descrição / Pauta da Agenda
+                </div>
+                <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed bg-white p-3 border border-slate-200">
+                  {data['Descrição']}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+    );
+  };
 
-      {/* Linha 1 de Gráficos: Municípios, Regiões SC e Bairros de Floripa */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <InteractiveBarChart
-          data={dashboardStats.municipiosRanking}
-          title="Visitas por Município"
-          subtitle="Clique no município para abrir a Ficha"
-          onItemClick={(name) => setFichaModal({ type: 'municipio', name })}
-        />
-        <InteractiveBarChart
-          data={dashboardStats.regioesSCRanking}
-          title="Presença por Região de SC"
-          subtitle="Clique para filtrar a macrorregião"
-          onItemClick={(reg) => setSelectedRegioesSC([reg])}
-        />
-        <InteractiveBarChart
-          data={dashboardStats.bairrosFloripaRanking}
-          title="Bairros REPLAN (Florianópolis)"
-          subtitle="56 bairros oficiais da aba Apoio"
-          onItemClick={(bairro) => setSelectedBairrosFloripa([bairro])}
-        />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+        <div className="text-center p-6 bg-white border border-slate-300 shadow-xs">
+          <div className="flex space-x-2 justify-center mb-4">
+            <div className="w-4 h-4 bg-rose-700 animate-bounce" style={{ animationDelay: '0s' }}></div>
+            <div className="w-4 h-4 bg-amber-300 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-4 h-4 bg-teal-700 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+          </div>
+          <p className="text-slate-700 font-bold text-xs uppercase tracking-widest">Carregando Agendas...</p>
+        </div>
       </div>
-
-      {/* Linha 2 de Gráficos: Classes de Atividade e Articuladores */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <InteractiveBarChart
-          data={dashboardStats.classes}
-          title="Classes de Atividade"
-          subtitle="Clique para filtrar por classe"
-          onItemClick={(cls) => setSelectedClasses([cls])}
-        />
-        <InteractiveDonutChart
-          data={dashboardStats.classes}
-          title="Proporção de Classes (Top 5 + Outros)"
-          onSliceClick={(cls) => setSelectedClasses([cls])}
-        />
-        <InteractiveBarChart
-          data={dashboardStats.articuladores}
-          title="Atuação por Articulador"
-          subtitle="Clique no nome para abrir a Ficha do Assessor"
-          onItemClick={(art) => setFichaModal({ type: 'articulador', name: art })}
-        />
-      </div>
-
-      <SimpleLineChart data={dashboardStats.temporalLine} title="Evolução Mensal das Agendas" />
-
-      {/* Mapas Aprimorados */}
-      <div className="grid grid-cols-1 gap-8">
-        <EnhancedTerritorialMap
-          events={filteredEvents}
-          title="Mapa Territorial de Santa Catarina (Coroplético + Clusters de Visitas)"
-          isFloripa={false}
-          onMunicipioClick={(mun) => setFichaModal({ type: 'municipio', name: mun })}
-          onEventClick={(ev) => setSelectedEvent(ev)}
-        />
-        <EnhancedTerritorialMap
-          events={filteredEvents.filter(e => normalizerFilter(e['Município']) === 'florianopolis')}
-          title="Mapa Urbano de Florianópolis (56 Bairros REPLAN)"
-          isFloripa={true}
-          onMunicipioClick={() => setFichaModal({ type: 'municipio', name: 'Florianópolis' })}
-          onEventClick={(ev) => setSelectedEvent(ev)}
-        />
-      </div>
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#Fdfcf0] font-sans text-[#111111] flex flex-col md:flex-row selection:bg-[#EAA221] selection:text-[#111111]">
-      {/* SIDEBAR MONDRIAN */}
-      <nav className="bg-[#111111] text-[#Fdfcf0] w-full md:w-60 flex-shrink-0 flex flex-col z-40 border-r-[6px] border-[#111111]">
-        <div
-          className="p-5 bg-[#C1272D] flex flex-col cursor-pointer hover:bg-[#A31F25] transition-colors border-b-[4px] border-[#111111]"
-          onClick={resetAllFilters}
-          title="Limpar todos os filtros"
-        >
-          <div className="flex items-center gap-3">
-            <img
-              src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png"
-              alt="Icon"
-              className="w-10 h-10 flex-shrink-0 object-contain drop-shadow-[2px_2px_0px_rgba(17,17,17,1)]"
-            />
-            <div className="flex flex-col flex-1">
-              <h1 className="text-2xl font-black tracking-tighter text-[#Fdfcf0] leading-none">TABULUM</h1>
-              <p className="text-[8px] text-[#Fdfcf0] font-black uppercase tracking-widest bg-[#111111] px-1.5 py-0.5 border-[2px] border-[#Fdfcf0] text-center mt-1">
-                GesTAgen v2.0
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-row md:flex-col p-4 gap-3 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('list')}
-            className={`px-4 py-3 border-[3px] border-[#Fdfcf0] text-[10px] font-black uppercase text-left transition-all ${
-              activeTab === 'list' ? 'bg-[#EAA221] text-[#111111] shadow-[4px_4px_0px_0px_#ffffff]' : 'bg-[#111111] hover:bg-[#222222]'
-            }`}
-          >
-            ■ AGENDAS ({filteredEvents.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('fichas')}
-            className={`px-4 py-3 border-[3px] border-[#Fdfcf0] text-[10px] font-black uppercase text-left transition-all ${
-              activeTab === 'fichas' ? 'bg-[#C1272D] text-[#Fdfcf0] shadow-[4px_4px_0px_0px_#ffffff]' : 'bg-[#111111] hover:bg-[#222222]'
-            }`}
-          >
-            ■ FICHAS MUNICIPAIS ({dashboardStats.municipiosVisitadosCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-3 border-[3px] border-[#Fdfcf0] text-[10px] font-black uppercase text-left transition-all ${
-              activeTab === 'dashboard' ? 'bg-[#007D8A] text-[#Fdfcf0] shadow-[4px_4px_0px_0px_#ffffff]' : 'bg-[#111111] hover:bg-[#222222]'
-            }`}
-          >
-            ■ DASHBOARD & MAPAS
-          </button>
-        </div>
-
-        <div className="mt-auto hidden md:block p-4">
-          <div className="bg-[#Fdfcf0] border-[3px] border-[#111111] p-3 text-[#111111] text-[8px] font-black uppercase space-y-1">
-            <div className="border-b-[2px] border-[#111111] pb-1">Suíte TABULUM</div>
-            <div className="text-[#007D8A]">● GesTAgen (Ativo)</div>
-            <div className="opacity-60">○ SIG-Emendas (Pronto p/ Link)</div>
-            <div className="opacity-60">○ MapEl Votos (Pronto p/ Link)</div>
-            <div className="opacity-60">○ GestUP Lideranças</div>
-          </div>
-        </div>
-      </nav>
-
-      {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="w-16 h-16 rounded-full border-[6px] border-t-[#C1272D] border-r-[#EAA221] border-b-[#007D8A] border-l-transparent animate-spin" />
-            <div className="font-black uppercase text-sm bg-[#ffffff] px-4 py-2 border-[3px] border-[#111111]">
-              Sincronizando Planilha Google Sheets...
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-7xl mx-auto">
-            {renderUniversalTopBar()}
-            {activeTab === 'list' && renderList()}
-            {activeTab === 'fichas' && renderFichasExplorer()}
-            {activeTab === 'dashboard' && renderDashboard()}
-          </div>
-        )}
+    <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 selection:bg-amber-200 selection:text-slate-900 pb-12 print:pb-0">
+      <UnifiedTopBar />
+      {/* Espaçador para compensar a altura da barra superior 100% fixa */}
+      <div className="h-[108px] sm:h-[96px] print:hidden"></div>
+      <main>
+        {currentView === 'list' && <ListView />}
+        {currentView === 'dashboard' && <DashboardView />}
+        {currentView === 'entity' && <EntityProfileView />}
+        {currentView === 'detail' && <DetailView />}
       </main>
-
-      {/* ==========================================
-          MODAL DE FICHA CRUZADA (DOSSIÊ DE MUNICÍPIO OU ARTICULADOR)
-          ========================================== */}
-      {activeFichaData && (
-        <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex items-center justify-center p-4"
-          onClick={() => setFichaModal(null)}
-        >
-          <div
-            className="bg-[#Fdfcf0] w-full max-w-4xl max-h-[90vh] border-[6px] border-[#111111] shadow-[12px_12px_0px_0px_#111111] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Cabeçalho da Ficha */}
-            <div className="p-5 bg-[#C1272D] text-[#Fdfcf0] border-b-[4px] border-[#111111] flex justify-between items-start">
-              <div>
-                <span className="bg-[#111111] text-[#EAA221] text-[9px] font-black uppercase px-2.5 py-1 border-[2px] border-[#Fdfcf0]">
-                  {activeFichaData.type === 'municipio' ? `DOSSIÊ MUNICIPAL • ${activeFichaData.regiaoSC}` : 'FICHA DE ARTICULADOR / ASSESSORIA'}
-                </span>
-                <h2 className="text-2xl md:text-3xl font-black uppercase mt-2 leading-none">{activeFichaData.name}</h2>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeFichaData.type === 'municipio') setSelectedMunicipios([activeFichaData.name]);
-                    else setSelectedArticuladores([activeFichaData.name]);
-                    setFichaModal(null);
-                  }}
-                  className="px-3 py-2 bg-[#EAA221] text-[#111111] font-black text-[9px] uppercase border-[3px] border-[#111111] shadow-[3px_3px_0px_0px_#111111]"
-                >
-                  FILTRAR PAINEL POR ESTE NOME
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFichaModal(null)}
-                  className="px-3 py-2 bg-[#111111] text-[#Fdfcf0] font-black text-xs border-[3px] border-[#Fdfcf0]"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Corpo da Ficha */}
-            <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
-              {/* Indicadores Principais */}
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                <div className="bg-[#ffffff] p-3 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <span className="text-[8px] font-black uppercase block opacity-70">Total de Visitas/Agendas</span>
-                  <span className="text-2xl font-black text-[#C1272D]">{activeFichaData.total}</span>
-                </div>
-                <div className="bg-[#ffffff] p-3 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <span className="text-[8px] font-black uppercase block opacity-70">Presenciais vs Online</span>
-                  <span className="text-sm font-black text-[#007D8A]">{activeFichaData.presenciais} Pres. / {activeFichaData.online} On.</span>
-                </div>
-                <div className="bg-[#ffffff] p-3 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <span className="text-[8px] font-black uppercase block opacity-70">Tempo Dedicado</span>
-                  <span className="text-2xl font-black text-[#111111]">{activeFichaData.horas}h</span>
-                </div>
-                <div className="bg-[#ffffff] p-3 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <span className="text-[8px] font-black uppercase block opacity-70">Última Visita/Agenda</span>
-                  <span className="text-xs font-black text-[#111111]">{activeFichaData.lastVisit}</span>
-                </div>
-                <div className="bg-[#ffffff] p-3 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <span className="text-[8px] font-black uppercase block opacity-70">Próxima Agenda</span>
-                  <span className="text-xs font-black text-[#007D8A]">{activeFichaData.nextVisit}</span>
-                </div>
-                <div className="bg-[#ffffff] p-3 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <span className="text-[8px] font-black uppercase block opacity-70">Alta Prioridade</span>
-                  <span className="text-2xl font-black text-[#C1272D]">{activeFichaData.altaPrio}</span>
-                </div>
-              </div>
-
-              {/* Cruzamentos (Articuladores x Classes x Bairros) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#ffffff] p-4 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <h4 className="text-[10px] font-black uppercase border-b-[2px] border-[#111111] pb-1.5 mb-3">
-                    {activeFichaData.type === 'municipio' ? '🤝 Articuladores que Atuaram no Município' : '📍 Municípios Articulados pelo Assessor'}
-                  </h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                    {activeFichaData.crossList.map((item, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          if (item.name !== 'Sem Articulador' && item.name !== 'Não Identificado') {
-                            setFichaModal({ type: activeFichaData.type === 'municipio' ? 'articulador' : 'municipio', name: item.name });
-                          }
-                        }}
-                        className="flex justify-between items-center text-[9px] font-black uppercase bg-[#Fdfcf0] px-2.5 py-1.5 border-[2px] border-[#111111] cursor-pointer hover:bg-[#EAA221]"
-                      >
-                        <span>{item.name}</span>
-                        <span className="bg-[#111111] text-[#Fdfcf0] px-2 py-0.5">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-[#ffffff] p-4 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <h4 className="text-[10px] font-black uppercase border-b-[2px] border-[#111111] pb-1.5 mb-3">
-                    📂 Classes de Atividade Realizadas
-                  </h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                    {activeFichaData.classesList.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-[9px] font-black uppercase bg-[#Fdfcf0] px-2.5 py-1.5 border-[2px] border-[#111111]">
-                        <span>{item.name}</span>
-                        <span className="bg-[#007D8A] text-[#Fdfcf0] px-2 py-0.5">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Subdivisão por Bairros REPLAN caso seja Florianópolis */}
-              {activeFichaData.bairrosList.length > 0 && (
-                <div className="bg-[#ffffff] p-4 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                  <h4 className="text-[10px] font-black uppercase border-b-[2px] border-[#111111] pb-1.5 mb-3">
-                    🏘️ Distribuição por Bairros REPLAN ({activeFichaData.bairrosList.length} bairros)
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {activeFichaData.bairrosList.map((b, i) => (
-                      <span key={i} className="text-[9px] font-black uppercase bg-[#Fdfcf0] border-[2px] border-[#111111] px-2.5 py-1">
-                        {b.name}: <b className="text-[#C1272D]">{b.value}</b>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Histórico Completo de Agendas da Ficha */}
-              <div className="bg-[#ffffff] p-4 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                <h4 className="text-[10px] font-black uppercase border-b-[2px] border-[#111111] pb-1.5 mb-3">
-                  📅 Linha do Tempo de Compromissos ({activeFichaData.eventsList.length})
-                </h4>
-                <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
-                  {activeFichaData.eventsList.map((ev, i) => (
-                    <div
-                      key={i}
-                      onClick={() => { setFichaModal(null); setSelectedEvent(ev); }}
-                      className="p-2.5 bg-[#Fdfcf0] border-[2px] border-[#111111] hover:bg-[#EAA221] cursor-pointer flex flex-col md:flex-row justify-between md:items-center gap-2 text-[9px] font-black uppercase"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="bg-[#111111] text-[#Fdfcf0] px-1.5 py-0.5">{formatDate(ev['Início'])}</span>
-                        <span className="text-[#C1272D]">[{ev['Classe de Atividade']}]</span>
-                        <span>{ev['Título']}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {ev['Articulador'] && <span className="text-[#007D8A]">🤝 {ev['Articulador']}</span>}
-                        <span className="px-1.5 py-0.5 border border-[#111111] bg-[#ffffff]">{ev['STATUS']}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==========================================
-          DRAWER DE DETALHES DO EVENTO INDIVIDUAL + EDIÇÃO SEGURA (COLUNAS J, K, L)
-          ========================================== */}
-      {selectedEvent && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex justify-end" onClick={() => setSelectedEvent(null)}>
-          <div
-            className="bg-[#Fdfcf0] w-full max-w-lg h-full border-l-[6px] border-[#111111] flex flex-col overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 bg-[#ffffff] border-b-[4px] border-[#111111] sticky top-0 z-10 flex justify-between items-start">
-              <div>
-                <span className="bg-[#111111] text-[#Fdfcf0] text-[9px] font-black uppercase px-2 py-1">
-                  {selectedEvent['Classe de Atividade']} • {selectedEvent['Modalidade']}
-                </span>
-                <h2 className="text-xl font-black text-[#111111] leading-tight uppercase mt-2">{selectedEvent['Título']}</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedEvent(null)}
-                className="p-2 bg-[#C1272D] text-[#Fdfcf0] border-[3px] border-[#111111] font-black"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-6 space-y-5">
-              {/* Edição de Status (Col J) e Prioridade (Col L) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[8px] font-black uppercase block mb-1">Status (Coluna J)</label>
-                  <select
-                    value={selectedEvent['STATUS'] || 'Pendente'}
-                    onChange={(e) => handleUpdateField(selectedEvent.id, 'STATUS', e.target.value, { status: e.target.value })}
-                    className="w-full border-[3px] border-[#111111] font-black text-xs uppercase p-2.5 bg-[#ffffff]"
-                  >
-                    <option value="Pendente">Pendente</option>
-                    <option value="Confirmado">Confirmado</option>
-                    <option value="Realizado">Realizado</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[8px] font-black uppercase block mb-1">Prioridade (Coluna L)</label>
-                  <select
-                    value={selectedEvent['Prioridade'] || 'Sem Prioridade'}
-                    onChange={(e) => handleUpdateField(selectedEvent.id, 'Prioridade', e.target.value, { prioridade: e.target.value })}
-                    className="w-full border-[3px] border-[#111111] font-black text-xs uppercase p-2.5 bg-[#ffffff]"
-                  >
-                    <option value="Sem Prioridade">Sem Prioridade</option>
-                    <option value="Alta">Alta</option>
-                    <option value="Média">Média</option>
-                    <option value="Baixa">Baixa</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Edição Manual de Articulador via Coluna K (ARTICULADOR - INPUT) sem quebrar ARRAYFORMULA */}
-              <div className="bg-[#ffffff] p-4 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111]">
-                <label className="text-[8px] font-black uppercase text-[#007D8A] block mb-1">
-                  Articulador Responsável (Salva na Coluna K - ARTICULADOR INPUT)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    defaultValue={selectedEvent['Articulador'] || ''}
-                    placeholder="Digite o nome do articulador..."
-                    onBlur={(e) => handleUpdateField(selectedEvent.id, 'Articulador', toProperCase(e.target.value), { articuladorInput: toProperCase(e.target.value) })}
-                    className="flex-1 px-3 py-2 bg-[#Fdfcf0] border-[2px] border-[#111111] font-black text-xs uppercase"
-                  />
-                  {selectedEvent['Articulador'] && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const art = selectedEvent['Articulador'];
-                        setSelectedEvent(null);
-                        setFichaModal({ type: 'articulador', name: art });
-                      }}
-                      className="px-3 py-2 bg-[#007D8A] text-[#Fdfcf0] text-[9px] font-black uppercase border-[2px] border-[#111111]"
-                    >
-                      Abrir Ficha ↗
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Metadados Completos */}
-              <div className="bg-[#ffffff] p-4 border-[3px] border-[#111111] shadow-[4px_4px_0px_0px_#111111] space-y-3 text-xs">
-                <div className="flex justify-between items-center border-b border-[#111111]/20 pb-2">
-                  <div>
-                    <span className="text-[8px] font-black uppercase text-[#C1272D] block">Município / Região SC</span>
-                    <span className="font-black uppercase">{selectedEvent['Município']} ({selectedEvent['Região SC']})</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const mun = selectedEvent['Município'];
-                      setSelectedEvent(null);
-                      setFichaModal({ type: 'municipio', name: mun });
-                    }}
-                    className="px-3 py-1.5 bg-[#C1272D] text-[#Fdfcf0] text-[9px] font-black uppercase border-[2px] border-[#111111]"
-                  >
-                    Dossiê Municipal ↗
-                  </button>
-                </div>
-
-                {selectedEvent['Bairro'] !== '-' && (
-                  <div>
-                    <span className="text-[8px] font-black uppercase text-[#007D8A] block">Bairro REPLAN / Distrito / Região Floripa</span>
-                    <span className="font-black uppercase">{selectedEvent['Bairro']} • {selectedEvent['Distrito']} • {selectedEvent['Região Floripa']}</span>
-                  </div>
-                )}
-
-                <div>
-                  <span className="text-[8px] font-black uppercase text-[#111111] opacity-70 block">Data e Duração</span>
-                  <span className="font-bold uppercase">{formatDate(selectedEvent['Início'])} ({selectedEvent['Duração']} minutos)</span>
-                </div>
-
-                <div>
-                  <span className="text-[8px] font-black uppercase text-[#111111] opacity-70 block">Local Registrado</span>
-                  <span className="font-bold uppercase">{selectedEvent['Local'] || 'Não informado'}</span>
-                </div>
-
-                {selectedEvent['Descrição'] && (
-                  <div>
-                    <span className="text-[8px] font-black uppercase text-[#111111] opacity-70 block">Descrição / Pauta</span>
-                    <p className="font-bold text-[11px] bg-[#Fdfcf0] p-3 border-[2px] border-[#111111] mt-1 whitespace-pre-wrap">
-                      {selectedEvent['Descrição']}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style dangerouslySetInnerHTML={{__html: `
-        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #Fdfcf0; border-left: 2px solid #111111; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #111111; }
-        .leaflet-container { background: #Fdfcf0 !important; font-family: inherit !important; z-index: 0 !important; }
-        .custom-leaflet-tooltip { border: 3px solid #111111 !important; border-radius: 0 !important; background: #ffffff !important; color: #111111 !important; box-shadow: 4px 4px 0px 0px #111111 !important; padding: 8px 10px !important; }
-        .custom-leaflet-tooltip::before { display: none !important; }
-      `}} />
     </div>
   );
 }
