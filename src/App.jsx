@@ -1,13 +1,64 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
 // ==========================================
-// CONFIGURAÇÃO DA API GOOGLE SHEETS
+// CONFIGURAÇÃO DA API GOOGLE SHEETS E SUÍTE TABULUM
 // ==========================================
-const getApiUrl = () => {
-  try { return import.meta.env.VITE_APPS_SCRIPT_URL || ''; }
-  catch (e) { return ''; }
+const getEnvVar = (key, fallback = '') => {
+  try { return import.meta.env[key] || fallback; }
+  catch (e) { return fallback; }
 };
-const API_URL = getApiUrl();
+
+const API_URL = getEnvVar('VITE_APPS_SCRIPT_URL', '');
+const DEFAULT_EMENDAS_API_URL = getEnvVar('VITE_EMENDAS_API_URL', '');
+
+const DEFAULT_SUITE_APPS = [
+  {
+    id: 'gestagen',
+    name: 'TABULUM - GesTAgen',
+    shortName: 'GesTAgen',
+    subtitle: 'Agendas & Território',
+    url: getEnvVar('VITE_URL_GESTAGEN', '#'),
+    color: 'bg-teal-700',
+    badge: 'ATUAL',
+    current: true
+  },
+  {
+    id: 'emendas',
+    name: 'TABULUM - SIG-Emendas',
+    shortName: 'SIG-Emendas',
+    subtitle: 'Execução Orçamentária & Emendas',
+    url: getEnvVar('VITE_URL_EMENDAS', 'https://tabulum-emendas.vercel.app'),
+    color: 'bg-rose-700',
+    badge: 'ORÇAMENTO'
+  },
+  {
+    id: 'monilegis',
+    name: 'TABULUM - SIG-MoniLegis',
+    shortName: 'SIG-MoniLegis',
+    subtitle: 'Monitoramento Legislativo ALESC',
+    url: getEnvVar('VITE_URL_MONILEGIS', 'https://tabulum-monilegis.vercel.app'),
+    color: 'bg-amber-400',
+    badge: 'LEGISLATIVO'
+  },
+  {
+    id: 'mapel',
+    name: 'TABULUM - MapEl',
+    shortName: 'MapEl',
+    subtitle: 'Mapeamento & Desempenho Eleitoral',
+    url: getEnvVar('VITE_URL_MAPEL', 'https://tabulum-mapel.vercel.app'),
+    color: 'bg-slate-800',
+    badge: 'ELEITORAL'
+  },
+  {
+    id: 'gestup',
+    name: 'TABULUM - GestUP',
+    shortName: 'GestUP',
+    subtitle: 'Gestão de Projetos & Mandato',
+    url: getEnvVar('VITE_URL_GESTUP', 'https://tabulum-gestup.vercel.app'),
+    color: 'bg-teal-900',
+    badge: 'PROJETOS'
+  }
+];
 
 // ==========================================
 // ÍCONES SVG MINIMALISTAS (PADRÃO TABULUM - EMENDAS)
@@ -48,6 +99,9 @@ const DownloadIcon = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2
 const PrinterIcon = (p) => <Icon {...p} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></>} />;
 const FilterIcon = (p) => <Icon {...p} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
 const AlertCircleIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></>} />;
+const CrosshairIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></>} />;
+const ExternalLinkIcon = (p) => <Icon {...p} path={<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></>} />;
+const DatabaseIcon = (p) => <Icon {...p} path={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></>} />;
 
 // ==========================================
 // DICIONÁRIOS TERRITORIAIS (ABA APOIO: 56 BAIRROS REPLAN + REGIÕES SC)
@@ -142,7 +196,15 @@ const SC_REGION_MAP = {
 
 const MOCK_DATA = [
   { id: 2, 'Título': 'Sessão Plenária ALESC', 'Início': new Date(Date.now() + 86400000).toISOString(), 'Fim': new Date(Date.now() + 93600000).toISOString(), 'Descrição': 'Votação ambiental.', 'Duração': 120, 'Local': 'ALESC - Centro, Florianópolis', 'Classe de Atividade': 'PLENÁRIA', 'Município': 'Florianópolis', 'Articulador': 'Carla', 'STATUS': 'Confirmado', 'Prioridade': 'Alta' },
-  { id: 3, 'Título': 'Reunião Associação Comunitária', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Pauta de saneamento e agroecologia.', 'Duração': 150, 'Local': 'Imbituba, SC', 'Classe de Atividade': 'REUNIÃO', 'Município': 'Imbituba', 'Articulador': 'Laura', 'STATUS': 'Pendente', 'Prioridade': 'Média' }
+  { id: 3, 'Título': 'Reunião Associação Comunitária', 'Início': new Date(Date.now() + 172800000).toISOString(), 'Fim': new Date(Date.now() + 182800000).toISOString(), 'Descrição': 'Pauta de saneamento e agroecologia.', 'Duração': 150, 'Local': 'Imbituba, SC', 'Classe de Atividade': 'REUNIÃO', 'Município': 'Imbituba', 'Articulador': 'Laura', 'STATUS': 'Pendente', 'Prioridade': 'Média' },
+  { id: 4, 'Título': 'Encontro Regional de Agroecologia', 'Início': new Date(Date.now() - 604800000).toISOString(), 'Fim': new Date(Date.now() - 594800000).toISOString(), 'Descrição': 'Articulação com pequenos produtores.', 'Duração': 180, 'Local': 'Laguna, SC', 'Classe de Atividade': 'SEMINÁRIO', 'Município': 'Laguna', 'Articulador': 'Laura', 'STATUS': 'Realizado', 'Prioridade': 'Alta' }
+];
+
+const MOCK_EMENDAS = [
+  { id: 101, 'Município': 'Florianópolis', 'Objeto': 'Horta Comunitária e Agroecologia Escolar', 'Área': 'Educação / Agroecologia', 'Beneficiário': 'Associação Comunitária', 'Valor': 250000, 'Ano': '2026', 'Status': 'Pago' },
+  { id: 102, 'Município': 'Imbituba', 'Objeto': 'Saneamento Ecológico e Gestão Comunitária', 'Área': 'Meio Ambiente', 'Beneficiário': 'Fundo Municipal de Saúde', 'Valor': 180000, 'Ano': '2026', 'Status': 'Empenhado' },
+  { id: 103, 'Município': 'Chapecó', 'Objeto': 'Apoio à Agricultura Familiar e Feira Agroecológica', 'Área': 'Agricultura', 'Beneficiário': 'Cooperativa Regional', 'Valor': 200000, 'Ano': '2026', 'Status': 'Em Tramitação' },
+  { id: 104, 'Município': 'Lages', 'Objeto': 'Equipamentos para Saúde Comunitária', 'Área': 'Saúde', 'Beneficiário': 'Fundo Municipal', 'Valor': 150000, 'Ano': '2025', 'Status': 'Pago' }
 ];
 
 // ==========================================
@@ -165,6 +227,113 @@ function toProperCase(str) {
     if (idx > 0 && lowerExceptions.includes(w)) return w;
     return w.charAt(0).toUpperCase() + w.slice(1);
   }).join(' ');
+}
+
+function parseCurrencyBRL(val) {
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  if (!val) return 0;
+  let s = String(val).replace(/[R$\s]/g, '').trim();
+  if (!s) return 0;
+  if (s.includes(',') && s.includes('.')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function formatCurrencyBRL(val) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(val) || 0);
+}
+
+function parseCSVToObjects(csvText) {
+  const lines = String(csvText || '').split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length < 2) return [];
+  const sep = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
+  const splitCSVLine = (line) => {
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === sep && !inQuotes) {
+        result.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    result.push(cur.trim());
+    return result;
+  };
+  const headers = splitCSVLine(lines[0]);
+  return lines.slice(1).map((line, idx) => {
+    const vals = splitCSVLine(line);
+    const obj = { id: idx + 1 };
+    headers.forEach((h, i) => { obj[h] = vals[i] !== undefined ? vals[i] : ''; });
+    return obj;
+  });
+}
+
+function normalizeEmendasData(rawList) {
+  if (!Array.isArray(rawList)) return [];
+  return rawList.map((item, idx) => {
+    const em = { id: item.id || idx + 1 };
+    let mun = '';
+    let valor = 0;
+    let objeto = '';
+    let area = '';
+    let beneficiario = '';
+    let ano = '';
+    let status = '';
+
+    Object.keys(item).forEach(k => {
+      const nk = normalizerFilter(k);
+      const val = item[k];
+      if (!mun && (nk === 'municipio' || nk.includes('municipio') || nk === 'cidade' || nk === 'localidade')) {
+        mun = String(val || '').replace(/\(sc\)|- sc|\/sc/ig, '').trim();
+      }
+      if (!valor && (nk === 'valor' || nk.includes('valor') || nk.includes('montante') || nk.includes('orcado') || nk.includes('recurso'))) {
+        const parsedVal = parseCurrencyBRL(val);
+        if (parsedVal > 0) valor = parsedVal;
+      }
+      if (!objeto && (nk.includes('objeto') || nk.includes('descricao') || nk.includes('finalidade') || nk.includes('titulo'))) {
+        objeto = String(val || '').trim();
+      }
+      if (!area && (nk.includes('area') || nk.includes('funcao') || nk.includes('setor') || nk.includes('eixo') || nk.includes('classe'))) {
+        area = String(val || '').trim();
+      }
+      if (!beneficiario && (nk.includes('beneficiario') || nk.includes('entidade') || nk.includes('orgao') || nk.includes('proponente'))) {
+        beneficiario = String(val || '').trim();
+      }
+      if (!ano && (nk === 'ano' || nk.includes('exercicio'))) {
+        ano = String(val || '').trim();
+      }
+      if (!status && (nk === 'status' || nk.includes('situacao') || nk.includes('estagio') || nk.includes('andamento'))) {
+        status = String(val || '').trim();
+      }
+    });
+
+    const cleanMun = mun ? toProperCase(mun) : '';
+    const normMun = normalizeStr(cleanMun);
+    return {
+      ...item,
+      id: em.id,
+      'Município': cleanMun,
+      'Município_Norm': normMun,
+      'Região': SC_REGION_MAP[normMun] || (cleanMun ? 'OUTRA REGIÃO SC' : ''),
+      'Valor': valor,
+      'Objeto': objeto || 'Emenda Parlamentar',
+      'Área': area || 'Geral',
+      'Beneficiário': beneficiario || '-',
+      'Ano': ano || '-',
+      'Status': status || 'Registrada'
+    };
+  }).filter(e => Boolean(e['Município_Norm']));
 }
 
 function parseLocalDate(dateVal) {
@@ -336,7 +505,7 @@ function sortEventsList(list, sortConfig) {
   return sorted;
 }
 
-// Metadados das dimensões para as Fichas de Cruzamento (igual ao TABULUM - Emendas)
+// Metadados das dimensões para as Fichas de Cruzamento
 const ENTITY_TYPE_META = {
   municipio: { label: 'Município', plural: 'Municípios', field: 'Município' },
   regiao: { label: 'Região SC', plural: 'Regiões de SC', field: 'Região' },
@@ -351,23 +520,71 @@ const ENTITY_TYPE_META = {
   ano: { label: 'Ano', plural: 'Anos', field: 'ANO' }
 };
 
+// Metadados dos 4 Quadrantes (Emendas × Agendas)
+const QUADRANT_META = {
+  Q1: {
+    id: 'Q1',
+    short: 'Q1 • Sinergia (Emenda + Agenda)',
+    title: 'Q1: Emendas + Agendas',
+    subtitle: 'Presença territorial e recurso destinado',
+    colorHex: '#007D8A',
+    badgeClass: 'bg-teal-700 text-white border-teal-900',
+    cardClass: 'bg-teal-700 text-white border-slate-800'
+  },
+  Q2: {
+    id: 'Q2',
+    short: 'Q2 • Alerta de Visita (Só Emenda)',
+    title: 'Q2: Só Emendas (0 Agendas)',
+    subtitle: 'Recurso alocado sem agenda registrada no filtro',
+    colorHex: '#be123c',
+    badgeClass: 'bg-rose-700 text-white border-rose-950',
+    cardClass: 'bg-rose-700 text-white border-slate-800'
+  },
+  Q3: {
+    id: 'Q3',
+    short: 'Q3 • Base s/ Emenda (Só Agenda)',
+    title: 'Q3: Só Agendas (0 Emendas)',
+    subtitle: 'Presença política sem emenda vinculada',
+    colorHex: '#fcd34d',
+    badgeClass: 'bg-amber-300 text-slate-900 border-slate-700',
+    cardClass: 'bg-amber-300 text-slate-900 border-slate-800'
+  },
+  Q4: {
+    id: 'Q4',
+    short: 'Q4 • Sem Cobertura (0 / 0)',
+    title: 'Q4: Sem Emendas e Sem Agendas',
+    subtitle: 'Território sem registro no recorte ativo',
+    colorHex: '#ffffff',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-300',
+    cardClass: 'bg-white text-slate-800 border-slate-300'
+  }
+};
+
 export default function App() {
   const [events, setEvents] = useState([]);
+  const [emendas, setEmendas] = useState([]);
+  const [emendasSourceLabel, setEmendasSourceLabel] = useState('Demonstração');
+  const [customEmendasUrl, setCustomEmendasUrl] = useState(() => {
+    try { return localStorage.getItem('tabulum_emendas_api_url') || DEFAULT_EMENDAS_API_URL; }
+    catch (e) { return DEFAULT_EMENDAS_API_URL; }
+  });
+
   const [loading, setLoading] = useState(true);
   const [mapGeoJson, setMapGeoJson] = useState(null);
 
-  const [currentView, setCurrentView] = useState('list'); // 'list' | 'dashboard' | 'entity' | 'detail'
-  const [viewMode, setViewMode] = useState('table');      // 'table' | 'cards'
+  // Views: 'list' | 'dashboard' | 'cruzamento' | 'entity' | 'detail'
+  const [currentView, setCurrentView] = useState('list');
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   const [selectedEntityFicha, setSelectedEntityFicha] = useState(null);
   const [entityHistory, setEntityHistory] = useState([]);
 
-  // Paginação exclusiva para o modo Card (5, 25, 50, 100, 200, Todas - padrão 50)
+  // Paginação exclusiva para o modo Card
   const [cardsPerPage, setCardsPerPage] = useState(50);
   const [currentCardPage, setCurrentCardPage] = useState(1);
 
-  // Controles de Escopo e Tempo (Preservados do GesTAgen original)
+  // Controles de Escopo e Tempo
   const [searchTerm, setSearchTerm] = useState('');
   const [scopeCapital, setScopeCapital] = useState(true);
   const [scopeInterior, setScopeInterior] = useState(true);
@@ -405,19 +622,70 @@ export default function App() {
     filterStatus, filterPrioridades, filterModalidades, filterAnos, sortConfig, cardsPerPage
   ]);
 
+  const loadEmendasData = async (overrideUrl = null,inlineEmendas = null) => {
+    if (Array.isArray(inlineEmendas) && inlineEmendas.length > 0) {
+      setEmendas(normalizeEmendasData(inlineEmendas));
+      setEmendasSourceLabel('API Integrada');
+      return;
+    }
+
+    const targetUrl = overrideUrl !== null ? overrideUrl : customEmendasUrl;
+    if (targetUrl && targetUrl.trim() !== '') {
+      try {
+        const res = await fetch(targetUrl.trim(), { redirect: 'follow' });
+        const text = await res.text();
+        let parsedList = [];
+        if (text.trim().startsWith('[') || text.trim().startsWith('{')) {
+          const json = JSON.parse(text);
+          parsedList = Array.isArray(json) ? json : (json.emendas || json.data || json.rows || []);
+        } else {
+          parsedList = parseCSVToObjects(text);
+        }
+        const normalized = normalizeEmendasData(parsedList);
+        if (normalized.length > 0) {
+          setEmendas(normalized);
+          setEmendasSourceLabel('Planilha / API Conectada');
+          return;
+        }
+      } catch (err) {
+        console.warn('Falha ao buscar URL de Emendas externa, tentando cache local:', err);
+      }
+    }
+
+    try {
+      const cached = localStorage.getItem('tabulum_emendas_cached_data');
+      if (cached) {
+        const parsedCache = JSON.parse(cached);
+        if (Array.isArray(parsedCache) && parsedCache.length > 0) {
+          setEmendas(normalizeEmendasData(parsedCache));
+          setEmendasSourceLabel('Arquivo CSV / Cache Local');
+          return;
+        }
+      }
+    } catch (e) {}
+
+    setEmendas(normalizeEmendasData(MOCK_EMENDAS));
+    setEmendasSourceLabel('Base Demo');
+  };
+
   const fetchSheetData = async () => {
     setLoading(true);
+    let inlineEmendasFromMainApi = null;
     try {
       if (!API_URL) throw new Error("Sem API URL, usando mock");
       const response = await fetch(API_URL, { redirect: "follow" });
       const text = await response.text();
       const parsed = JSON.parse(text);
       const rawArray = Array.isArray(parsed) ? parsed : (parsed.events || []);
+      if (parsed && Array.isArray(parsed.emendas)) {
+        inlineEmendasFromMainApi = parsed.emendas;
+      }
       setEvents(normalizeData(rawArray));
     } catch (error) {
       console.warn("Usando base local de demonstração:", error);
       setEvents(normalizeData(MOCK_DATA));
     } finally {
+      await loadEmendasData(null, inlineEmendasFromMainApi);
       setLoading(false);
     }
   };
@@ -432,7 +700,7 @@ export default function App() {
       .catch(err => console.error("Erro ao carregar GeoJSON de SC:", err));
   }, []);
 
-  // Atualizações diretas no Google Sheets (Coluna J = Status, Coluna K = Articulador Input, Coluna L = Prioridade)
+  // Atualizações diretas no Google Sheets
   const handleUpdateStatus = async (id, newStatus) => {
     setEvents(prev => prev.map(ev => ev.id === id ? { ...ev, 'STATUS': newStatus } : ev));
     if (selectedEvent && selectedEvent.id === id) setSelectedEvent(prev => ({ ...prev, 'STATUS': newStatus }));
@@ -491,7 +759,7 @@ export default function App() {
     setSortConfig({ key: 'Início', direction: 'asc' });
   };
 
-  // Navegação de Fichas Cruzadas (idêntica ao TABULUM - Emendas)
+  // Navegação de Fichas Cruzadas
   const openEntityFicha = (type, value, e = null) => {
     if (e && e.stopPropagation) e.stopPropagation();
     if (!value || String(value).trim() === '' || String(value).trim() === '-') return;
@@ -597,7 +865,7 @@ export default function App() {
     filterStatus, filterPrioridades, filterModalidades, filterAnos, sortConfig
   ]);
 
-  // Métricas do Gráfico Resumido de Informações Gerais (Preservado e levado para a Barra Superior Fixa)
+  // Métricas do Gráfico Resumido de Informações Gerais
   const summaryStats = useMemo(() => {
     const total = filteredAndSortedEvents.length;
     let capital = 0;
@@ -688,6 +956,7 @@ export default function App() {
   const getCurrentPageTitle = () => {
     if (currentView === 'list') return 'Painel de Agendas';
     if (currentView === 'dashboard') return 'Dashboard & Mapas';
+    if (currentView === 'cruzamento') return 'Cruzamento: Emendas × Agendas';
     if (currentView === 'entity' && selectedEntityFicha) {
       const meta = ENTITY_TYPE_META[selectedEntityFicha.type];
       return `${meta ? meta.label : 'Ficha'}: ${selectedEntityFicha.value}`;
@@ -698,7 +967,7 @@ export default function App() {
     return 'Painel de Agendas';
   };
 
-  // MultiSelect minimalista e suave (idêntico ao TABULUM - Emendas)
+  // MultiSelect minimalista e suave
   const MultiSelect = ({ id, label, options, selected, onChange }) => {
     const isOpen = openDropdown === id;
     const [optionSearch, setOptionSearch] = useState('');
@@ -786,7 +1055,110 @@ export default function App() {
   };
 
   // ============================================================================
-  // BARRA SUPERIOR ÚNICA E FIXA (Sem barra lateral + Gráfico Geral Fixo Integrado)
+  // SELETOR DA SUÍTE TABULUM (INTEGRADO NA BARRA SUPERIOR)
+  // ============================================================================
+  const TabulumSuiteSelector = () => {
+    const isOpen = openDropdown === 'suite_selector';
+
+    return (
+      <div className="relative">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenDropdown(isOpen ? null : 'suite_selector');
+          }}
+          className="px-2 py-1 border border-slate-300 bg-slate-900 text-white hover:bg-slate-800 rounded-xs text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+          title="Alternar entre sistemas da Suíte TABULUM"
+        >
+          <span className="flex space-x-0.5">
+            <span className="w-1.5 h-2.5 bg-rose-600 inline-block"></span>
+            <span className="w-1.5 h-2.5 bg-teal-500 inline-block"></span>
+            <span className="w-1.5 h-2.5 bg-amber-300 inline-block"></span>
+          </span>
+          <span className="hidden sm:inline">Suíte</span>
+          <ChevronDownIcon className="w-3 h-3 text-amber-300" />
+        </button>
+
+        {isOpen && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute z-50 top-full left-0 mt-1.5 w-72 bg-white border border-slate-800 shadow-lg rounded-xs overflow-hidden"
+          >
+            <div className="bg-slate-900 text-white px-3 py-2 border-b border-slate-800 flex justify-between items-center">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                Ecossistema Suíte TABULUM
+              </span>
+              <span className="text-[9px] font-semibold uppercase bg-slate-800 px-1.5 py-0.5 text-slate-300">
+                Mandato
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-200">
+              {DEFAULT_SUITE_APPS.map(app => (
+                <a
+                  key={app.id}
+                  href={app.current ? '#painel' : app.url}
+                  target={app.current ? '_self' : '_blank'}
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (app.current) {
+                      e.preventDefault();
+                      setOpenDropdown(null);
+                      resetToFrontPage();
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2.5 transition-colors ${
+                    app.current ? 'bg-teal-50/70 font-semibold' : 'hover:bg-amber-50/80'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <span className={`w-2.5 h-6 mt-0.5 flex-shrink-0 border border-slate-800 ${app.color}`}></span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <span className="truncate">{app.name}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 truncate">{app.subtitle}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 border ${
+                      app.current
+                        ? 'bg-teal-700 text-white border-teal-900'
+                        : 'bg-slate-100 text-slate-700 border-slate-300'
+                    }`}>
+                      {app.badge}
+                    </span>
+                    {!app.current && <ExternalLinkIcon className="w-3 h-3 text-slate-400" />}
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            <div className="bg-amber-100/90 border-t border-slate-300 p-2 flex justify-between items-center">
+              <span className="text-[10px] font-bold uppercase text-slate-800">
+                Integração Exclusiva GesTAgen:
+              </span>
+              <button
+                onClick={() => {
+                  setOpenDropdown(null);
+                  setShowPast(true);
+                  setShowFuture(true);
+                  setCurrentView('cruzamento');
+                }}
+                className="px-2 py-1 bg-rose-700 text-white text-[10px] font-bold uppercase rounded-xs hover:bg-rose-800 transition-colors flex items-center gap-1"
+              >
+                <CrosshairIcon className="w-3 h-3" /> Emendas × Agendas
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // BARRA SUPERIOR ÚNICA E FIXA
   // ============================================================================
   const UnifiedTopBar = () => {
     const activeFilterCount =
@@ -818,15 +1190,17 @@ export default function App() {
           <div className="w-1/3 bg-amber-300"></div>
         </div>
 
-        {/* LINHA 1: Logo + Título + Navegação Painel/Dashboard + GRÁFICO RESUMIDO FIXO + Prioridades + Sincronizar */}
+        {/* LINHA 1: Seletor Suíte + Logo + Título + Navegação (Painel / Dashboard / Cruzamento) + GRÁFICO RESUMIDO FIXO + Prioridades + Sincronizar */}
         <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80">
-          {/* Esquerda: Marca + Página Atual + Navegação */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Esquerda: Seletor da Suíte + Marca + Página Atual + Navegação */}
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <TabulumSuiteSelector />
+
             <div className="flex items-center cursor-pointer group flex-shrink-0" onClick={resetToFrontPage} title="Voltar ao Início e Limpar Filtros">
               <img
                 src="https://raw.githubusercontent.com/killuixo/tabulum-gestafagen/refs/heads/main/icon-192.png"
                 alt="Ícone TABULUM"
-                className="w-6 h-6 sm:w-7 sm:h-7 mr-2 object-contain transition-transform group-hover:scale-105"
+                className="w-6 h-6 sm:w-7 sm:h-7 mr-1.5 object-contain transition-transform group-hover:scale-105"
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
               <span className="font-bold text-sm sm:text-base tracking-tight text-slate-900 whitespace-nowrap">
@@ -834,9 +1208,9 @@ export default function App() {
               </span>
             </div>
 
-            <span className="text-slate-300 select-none">|</span>
+            <span className="text-slate-300 select-none hidden md:inline">|</span>
 
-            <span className="text-xs sm:text-sm font-semibold text-teal-800 truncate max-w-[140px] sm:max-w-[260px]" title={getCurrentPageTitle()}>
+            <span className="hidden md:inline text-xs sm:text-sm font-semibold text-teal-800 truncate max-w-[140px] lg:max-w-[220px]" title={getCurrentPageTitle()}>
               {getCurrentPageTitle()}
             </span>
 
@@ -851,16 +1225,33 @@ export default function App() {
               </button>
               <button
                 onClick={() => { setCurrentView('dashboard'); setSelectedEntityFicha(null); }}
-                className={`px-2.5 py-1 flex items-center text-xs font-medium transition-colors ${
+                className={`px-2.5 py-1 flex items-center text-xs font-medium border-r border-slate-300 transition-colors ${
                   currentView === 'dashboard' ? 'bg-amber-300 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <LayoutDashboardIcon className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Dashboard</span>
               </button>
+              <button
+                onClick={() => {
+                  // Ao abrir o cruzamento territorial, habilita histórico passado + futuro por padrão para visão integral do mandato
+                  if (!showPast && showFuture) setShowPast(true);
+                  setCurrentView('cruzamento');
+                  setSelectedEntityFicha(null);
+                }}
+                className={`px-2.5 py-1 flex items-center text-xs font-medium transition-colors ${
+                  currentView === 'cruzamento'
+                    ? 'bg-teal-700 text-white font-semibold'
+                    : 'text-rose-800 bg-rose-50/60 hover:bg-rose-100/80 font-semibold'
+                }`}
+                title="Cruzamento Territorial: Emendas × Agendas (Mapa de 4 Quadrantes)"
+              >
+                <CrosshairIcon className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Cruzamento</span>
+              </button>
             </div>
           </div>
 
-          {/* Centro/Direita: GRÁFICO DE INFORMAÇÕES GERAIS FIXO (antigo widget da barra lateral) + Botão de Prioridades + Sincronizar */}
+          {/* Centro/Direita: GRÁFICO DE INFORMAÇÕES GERAIS FIXO + Botão de Prioridades + Sincronizar */}
           <div className="flex items-center gap-2 ml-auto flex-wrap">
             {/* Widget Gráfico Resumido Fixo */}
             <div className="flex items-center gap-3 bg-slate-50 border border-slate-300 px-3 py-1 rounded-xs">
@@ -869,7 +1260,7 @@ export default function App() {
                 <span className="text-sm font-bold text-rose-700 leading-none">{summaryStats.total}</span>
               </div>
 
-              <div className="w-32 sm:w-40 flex flex-col justify-center">
+              <div className="w-28 sm:w-36 flex flex-col justify-center">
                 <div className="flex justify-between text-[9px] font-semibold uppercase mb-0.5">
                   <span className="text-teal-800">Cap: {summaryStats.capital}</span>
                   <span className="text-amber-800">Est: {summaryStats.interior}</span>
@@ -880,7 +1271,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="hidden md:flex items-center gap-2.5 border-l border-slate-200 pl-2.5 text-[10px] font-semibold uppercase">
+              <div className="hidden xl:flex items-center gap-2.5 border-l border-slate-200 pl-2.5 text-[10px] font-semibold uppercase">
                 <span className="text-slate-600">Futuras: <strong className="text-teal-700">{summaryStats.futuras}</strong></span>
                 <span className="text-slate-600">Pendentes: <strong className="text-rose-700">{summaryStats.pendentes}</strong></span>
               </div>
@@ -923,7 +1314,7 @@ export default function App() {
         </div>
 
         {/* LINHA 2: Busca Universal + Toggles Rápidos + Multiseleção Suave + Ordenar Por + Lista/Card + Exportar */}
-        {(currentView === 'list' || currentView === 'dashboard' || currentView === 'entity') && (
+        {(currentView === 'list' || currentView === 'dashboard' || currentView === 'cruzamento' || currentView === 'entity') && (
           <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-1.5 flex flex-wrap items-center justify-between gap-1.5 bg-white">
             {/* Lado Esquerdo: Busca + Toggles + Multiseleção */}
             <div className="flex flex-wrap items-center gap-1.5 flex-1">
@@ -1023,27 +1414,29 @@ export default function App() {
 
             {/* Lado Direito: Ordenar Por + Alternância Lista/Card + Exportar CSV/PDF */}
             <div className="flex flex-wrap items-center gap-2 ml-auto">
-              <div className="flex items-center border border-slate-200 rounded-xs bg-slate-50/70">
-                <select
-                  value={sortConfig.key || ''}
-                  onChange={(e) => setSortConfig({ key: e.target.value || 'Início', direction: sortConfig.direction })}
-                  className="px-2 py-1 text-xs text-slate-700 bg-transparent focus:outline-none cursor-pointer"
-                  title="Ordenar agendas por campo"
-                >
-                  {sortableFieldsList.map(f => (
-                    <option key={f.key} value={f.key}>Ordenar: {f.label}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                  className="px-1.5 py-1 border-l border-slate-200 bg-amber-100/80 hover:bg-amber-200 text-xs font-semibold text-slate-800 flex items-center"
-                  title={sortConfig.direction === 'asc' ? 'Ordem Crescente' : 'Ordem Decrescente'}
-                >
-                  {sortConfig.direction === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
-                </button>
-              </div>
+              {currentView !== 'cruzamento' && (
+                <div className="flex items-center border border-slate-200 rounded-xs bg-slate-50/70">
+                  <select
+                    value={sortConfig.key || ''}
+                    onChange={(e) => setSortConfig({ key: e.target.value || 'Início', direction: sortConfig.direction })}
+                    className="px-2 py-1 text-xs text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+                    title="Ordenar agendas por campo"
+                  >
+                    {sortableFieldsList.map(f => (
+                      <option key={f.key} value={f.key}>Ordenar: {f.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                    className="px-1.5 py-1 border-l border-slate-200 bg-amber-100/80 hover:bg-amber-200 text-xs font-semibold text-slate-800 flex items-center"
+                    title={sortConfig.direction === 'asc' ? 'Ordem Crescente' : 'Ordem Decrescente'}
+                  >
+                    {sortConfig.direction === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              )}
 
-              {currentView !== 'dashboard' && (
+              {(currentView === 'list' || currentView === 'entity') && (
                 <div className="flex items-center gap-1.5">
                   <div className="flex border border-slate-200 rounded-xs overflow-hidden bg-slate-50/70">
                     <button
@@ -1102,6 +1495,799 @@ export default function App() {
           </div>
         )}
       </header>
+    );
+  };
+
+  // ============================================================================
+  // NOVA VISÃO EXCLUSIVA DO GESTAGEN: CRUZAMENTO (EMENDAS × AGENDAS) + MAPA 4 QUADRANTES
+  // ============================================================================
+  const CruzamentoView = () => {
+    const [hoveredMuni, setHoveredMuni] = useState(null);
+    const [selectedQuadrantFilter, setSelectedQuadrantFilter] = useState('ALL'); // 'ALL' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
+    const [cruzamentoSort, setCruzamentoSort] = useState({ key: 'valorEmendas', direction: 'desc' });
+    const [showSourceModal, setShowSourceModal] = useState(false);
+    const [urlInput, setUrlInput] = useState(customEmendasUrl);
+    const [onlyActiveRows, setOnlyActiveRows] = useState(true);
+
+    // Lista oficial dos 295 municípios de SC a partir do GeoJSON + dicionário SC_REGION_MAP + registros
+    const allMunicipalitiesList = useMemo(() => {
+      const setNames = new Map();
+      if (mapGeoJson && Array.isArray(mapGeoJson.features)) {
+        mapGeoJson.features.forEach(f => {
+          const rawName = f.properties?.name || '';
+          const norm = normalizeStr(rawName);
+          if (norm) setNames.set(norm, rawName);
+        });
+      }
+      Object.keys(SC_REGION_MAP).forEach(norm => {
+        if (!setNames.has(norm)) setNames.set(norm, toProperCase(norm));
+      });
+      filteredAndSortedEvents.forEach(ev => {
+        const norm = normalizeStr(ev['Município']);
+        if (norm && !setNames.has(norm)) setNames.set(norm, ev['Município']);
+      });
+      emendas.forEach(em => {
+        const norm = em['Município_Norm'];
+        if (norm && !setNames.has(norm)) setNames.set(norm, em['Município']);
+      });
+      return Array.from(setNames.entries()).map(([norm, displayName]) => ({
+        norm,
+        name: displayName,
+        regiao: SC_REGION_MAP[norm] || 'OUTRA REGIÃO SC'
+      }));
+    }, [mapGeoJson, filteredAndSortedEvents, emendas]);
+
+    // Agregação cruzada por Município (respeitando filtros globais de Região, Município e Ano se ativos)
+    const crossedMunicipalities = useMemo(() => {
+      const agendaMap = {};
+      filteredAndSortedEvents.forEach(ev => {
+        const norm = normalizeStr(ev['Município']);
+        if (!norm) return;
+        if (!agendaMap[norm]) {
+          agendaMap[norm] = {
+            count: 0,
+            presenciais: 0,
+            horas: 0,
+            lastDate: null,
+            nextDate: null,
+            articuladores: new Set()
+          };
+        }
+        agendaMap[norm].count += 1;
+        if (ev['Modalidade'] === 'Presencial') agendaMap[norm].presenciais += 1;
+        agendaMap[norm].horas += (Number(ev['Duração']) || 0) / 60;
+        if (ev['Articulador']) agendaMap[norm].articuladores.add(ev['Articulador']);
+
+        const d = parseLocalDate(ev['Início']);
+        if (d) {
+          if (d < getTodayStart() && (!agendaMap[norm].lastDate || d > agendaMap[norm].lastDate)) {
+            agendaMap[norm].lastDate = d;
+          }
+          if (d >= getTodayStart() && (!agendaMap[norm].nextDate || d < agendaMap[norm].nextDate)) {
+            agendaMap[norm].nextDate = d;
+          }
+        }
+      });
+
+      const emendaMap = {};
+      emendas.forEach(em => {
+        if (filterAnos.length > 0 && em['Ano'] && !filterAnos.includes(String(em['Ano']))) return;
+        const norm = em['Município_Norm'];
+        if (!norm) return;
+        if (!emendaMap[norm]) {
+          emendaMap[norm] = {
+            count: 0,
+            valor: 0,
+            areas: new Set(),
+            objetos: []
+          };
+        }
+        emendaMap[norm].count += 1;
+        emendaMap[norm].valor += Number(em['Valor']) || 0;
+        if (em['Área']) emendaMap[norm].areas.add(em['Área']);
+        if (em['Objeto']) emendaMap[norm].objetos.push(em['Objeto']);
+      });
+
+      return allMunicipalitiesList
+        .filter(m => {
+          const isFloripa = m.norm.includes('FLORIANOPOLIS') || m.norm.includes('FLORIPA');
+          if (!scopeCapital && isFloripa) return false;
+          if (!scopeInterior && !isFloripa) return false;
+          if (filterRegioes.length > 0 && !filterRegioes.includes(m.regiao)) return false;
+          if (filterMunicipios.length > 0 && !filterMunicipios.some(fm => normalizeStr(fm) === m.norm)) return false;
+          return true;
+        })
+        .map(m => {
+          const ag = agendaMap[m.norm] || { count: 0, presenciais: 0, horas: 0, lastDate: null, nextDate: null, articuladores: new Set() };
+          const em = emendaMap[m.norm] || { count: 0, valor: 0, areas: new Set(), objetos: [] };
+
+          let quadrant = 'Q4';
+          if (em.count > 0 && ag.count > 0) quadrant = 'Q1';
+          else if (em.count > 0 && ag.count === 0) quadrant = 'Q2';
+          else if (em.count === 0 && ag.count > 0) quadrant = 'Q3';
+
+          return {
+            norm: m.norm,
+            name: m.name,
+            regiao: m.regiao,
+            quadrant,
+            agendasCount: ag.count,
+            presenciaisCount: ag.presenciais,
+            horasAgendas: ag.horas,
+            lastDate: ag.lastDate,
+            nextDate: ag.nextDate,
+            articuladores: Array.from(ag.articuladores).join(', '),
+            emendasCount: em.count,
+            valorEmendas: em.valor,
+            areasEmendas: Array.from(em.areas).join(', '),
+            objetosEmendas: em.objetos.slice(0, 3).join(' • ')
+          };
+        });
+    }, [allMunicipalitiesList, filteredAndSortedEvents, emendas, filterAnos, filterRegioes, filterMunicipios, scopeCapital, scopeInterior]);
+
+    const crossedByNormMap = useMemo(() => {
+      const map = {};
+      crossedMunicipalities.forEach(item => { map[item.norm] = item; });
+      return map;
+    }, [crossedMunicipalities]);
+
+    // Estatísticas agregadas dos 4 Quadrantes
+    const quadrantStats = useMemo(() => {
+      const stats = {
+        Q1: { count: 0, valor: 0, emendas: 0, agendas: 0, horas: 0 },
+        Q2: { count: 0, valor: 0, emendas: 0, agendas: 0, horas: 0 },
+        Q3: { count: 0, valor: 0, emendas: 0, agendas: 0, horas: 0 },
+        Q4: { count: 0, valor: 0, emendas: 0, agendas: 0, horas: 0 }
+      };
+      crossedMunicipalities.forEach(m => {
+        const q = stats[m.quadrant];
+        if (!q) return;
+        q.count += 1;
+        q.valor += m.valorEmendas;
+        q.emendas += m.emendasCount;
+        q.agendas += m.agendasCount;
+        q.horas += m.horasAgendas;
+      });
+      return stats;
+    }, [crossedMunicipalities]);
+
+    // Resumo Regional Cruzado (Regiões de SC)
+    const regionalCrossStats = useMemo(() => {
+      const regMap = {};
+      crossedMunicipalities.forEach(m => {
+        if (!regMap[m.regiao]) {
+          regMap[m.regiao] = { regiao: m.regiao, totalMunis: 0, q1: 0, q2: 0, q3: 0, q4: 0, valorEmendas: 0, agendasCount: 0 };
+        }
+        const r = regMap[m.regiao];
+        r.totalMunis += 1;
+        if (m.quadrant === 'Q1') r.q1 += 1;
+        if (m.quadrant === 'Q2') r.q2 += 1;
+        if (m.quadrant === 'Q3') r.q3 += 1;
+        if (m.quadrant === 'Q4') r.q4 += 1;
+        r.valorEmendas += m.valorEmendas;
+        r.agendasCount += m.agendasCount;
+      });
+      return Object.values(regMap).sort((a, b) => (b.valorEmendas - a.valorEmendas) || (b.agendasCount - a.agendasCount));
+    }, [crossedMunicipalities]);
+
+    // Linhas visíveis na tabela de cruzamento
+    const tableRows = useMemo(() => {
+      const filtered = crossedMunicipalities.filter(m => {
+        if (selectedQuadrantFilter !== 'ALL' && m.quadrant !== selectedQuadrantFilter) return false;
+        if (onlyActiveRows && selectedQuadrantFilter === 'ALL' && m.quadrant === 'Q4') return false;
+        if (searchTerm.trim() !== '') {
+          const term = normalizerFilter(searchTerm);
+          const bag = normalizerFilter(`${m.name} ${m.regiao} ${m.quadrant} ${m.articuladores} ${m.areasEmendas} ${m.objetosEmendas}`);
+          if (!bag.includes(term)) return false;
+        }
+        return true;
+      });
+
+      return [...filtered].sort((a, b) => {
+        const { key, direction } = cruzamentoSort;
+        if (key === 'name' || key === 'regiao' || key === 'quadrant') {
+          const cmp = String(a[key] || '').localeCompare(String(b[key] || ''), 'pt-BR', { sensitivity: 'base' });
+          return direction === 'asc' ? cmp : -cmp;
+        }
+        const diff = (Number(a[key]) || 0) - (Number(b[key]) || 0);
+        if (diff !== 0) return direction === 'asc' ? diff : -diff;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      });
+    }, [crossedMunicipalities, selectedQuadrantFilter, onlyActiveRows, searchTerm, cruzamentoSort]);
+
+    const requestCruzamentoSort = (key) => {
+      setCruzamentoSort(prev => ({
+        key,
+        direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+      }));
+    };
+
+    const exportCruzamentoCSV = () => {
+      if (tableRows.length === 0) {
+        alert("Nenhum município para exportar no filtro atual.");
+        return;
+      }
+      const headers = ['Município', 'Região SC', 'Quadrante', 'Diagnóstico', 'Nº Emendas', 'Valor Emendas (R$)', 'Áreas Emendas', 'Nº Agendas', 'Agendas Presenciais', 'Horas Dedicadas', 'Articuladores'];
+      const csvRows = [headers.map(h => `"${h}"`).join(',')];
+      tableRows.forEach(r => {
+        const qMeta = QUADRANT_META[r.quadrant];
+        const vals = [
+          r.name,
+          r.regiao,
+          r.quadrant,
+          qMeta ? qMeta.title : r.quadrant,
+          r.emendasCount,
+          r.valorEmendas.toFixed(2),
+          r.areasEmendas,
+          r.agendasCount,
+          r.presenciaisCount,
+          r.horasAgendas.toFixed(1),
+          r.articuladores
+        ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`);
+        csvRows.push(vals.join(','));
+      });
+      const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'cruzamento_emendas_agendas_sc.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    const handleSaveEmendasUrl = async () => {
+      try {
+        localStorage.setItem('tabulum_emendas_api_url', urlInput.trim());
+      } catch (e) {}
+      setCustomEmendasUrl(urlInput.trim());
+      await loadEmendasData(urlInput.trim());
+      setShowSourceModal(false);
+    };
+
+    const handleFileUploadEmendas = (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = String(evt.target?.result || '');
+        let rawList = [];
+        try {
+          if (file.name.endsWith('.json') || text.trim().startsWith('[')) {
+            const parsed = JSON.parse(text);
+            rawList = Array.isArray(parsed) ? parsed : (parsed.emendas || parsed.data || []);
+          } else {
+            rawList = parseCSVToObjects(text);
+          }
+          const normalized = normalizeEmendasData(rawList);
+          if (normalized.length > 0) {
+            setEmendas(normalized);
+            setEmendasSourceLabel(`Arquivo: ${file.name}`);
+            try { localStorage.setItem('tabulum_emendas_cached_data', JSON.stringify(rawList)); } catch (err) {}
+            setShowSourceModal(false);
+          } else {
+            alert('Não foi possível identificar colunas de Município no arquivo enviado.');
+          }
+        } catch (err) {
+          alert('Erro ao processar arquivo de Emendas.');
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    // Renderização do Mapa Vetorial de 4 Quadrantes de SC
+    const renderFourQuadrantMap = () => {
+      if (!mapGeoJson) return <div className="p-8 text-center font-medium text-slate-500">Carregando Mapa de Santa Catarina...</div>;
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      mapGeoJson.features.forEach(f => {
+        const processRings = (rings) => {
+          rings.forEach(ring => ring.forEach(coord => {
+            if (coord[0] < minX) minX = coord[0];
+            if (coord[0] > maxX) maxX = coord[0];
+            if (coord[1] < minY) minY = coord[1];
+            if (coord[1] > maxY) maxY = coord[1];
+          }));
+        };
+        if (f.geometry.type === 'Polygon') processRings(f.geometry.coordinates);
+        else if (f.geometry.type === 'MultiPolygon') f.geometry.coordinates.forEach(processRings);
+      });
+
+      const mapWidth = 800; const mapHeight = 560;
+      const scaleX = mapWidth / (maxX - minX);
+      const scaleY = mapHeight / (maxY - minY);
+      const scale = Math.min(scaleX, scaleY) * 0.95;
+
+      const offsetX = (mapWidth - (maxX - minX) * scale) / 2;
+      const offsetY = (mapHeight - (maxY - minY) * scale) / 2;
+
+      const project = (coord) => {
+        const x = (coord[0] - minX) * scale + offsetX;
+        const y = mapHeight - ((coord[1] - minY) * scale) - offsetY;
+        return `${x},${y}`;
+      };
+
+      const generatePath = (geometry) => {
+        const createString = (rings) => rings.map(ring => "M" + ring.map(coord => project(coord)).join("L") + "Z").join(" ");
+        if (geometry.type === 'Polygon') return createString(geometry.coordinates);
+        if (geometry.type === 'MultiPolygon') return geometry.coordinates.map(createString).join(" ");
+        return "";
+      };
+
+      return (
+        <svg
+          viewBox={`0 0 ${mapWidth} ${mapHeight}`}
+          className="w-full h-auto select-none"
+          onClick={() => setHoveredMuni(null)}
+        >
+          {mapGeoJson.features.map((feature, i) => {
+            const mName = normalizeStr(feature.properties.name);
+            const item = crossedByNormMap[mName] || {
+              name: feature.properties.name,
+              regiao: SC_REGION_MAP[mName] || 'SC',
+              quadrant: 'Q4',
+              agendasCount: 0,
+              presenciaisCount: 0,
+              horasAgendas: 0,
+              emendasCount: 0,
+              valorEmendas: 0,
+              areasEmendas: ''
+            };
+
+            const qMeta = QUADRANT_META[item.quadrant] || QUADRANT_META.Q4;
+            const isDimmed = selectedQuadrantFilter !== 'ALL' && item.quadrant !== selectedQuadrantFilter;
+            const fillHex = isDimmed ? '#f8fafc' : qMeta.colorHex;
+
+            return (
+              <path
+                key={i}
+                d={generatePath(feature.geometry)}
+                fill={fillHex}
+                fillOpacity={isDimmed ? 0.35 : 1}
+                stroke={isDimmed ? '#cbd5e1' : '#334155'}
+                strokeWidth={item.quadrant !== 'Q4' && !isDimmed ? "1.05" : "0.65"}
+                className="hover:stroke-[2.3px] hover:stroke-slate-950 transition-all cursor-pointer"
+                onMouseEnter={(e) => {
+                  setHoveredMuni({
+                    ...item,
+                    x: e.clientX,
+                    y: e.clientY,
+                    isTouch: false
+                  });
+                }}
+                onMouseMove={(e) => {
+                  setHoveredMuni(prev => prev && !prev.isTouch ? {
+                    ...prev,
+                    x: e.clientX,
+                    y: e.clientY
+                  } : prev);
+                }}
+                onMouseLeave={() => {
+                  setHoveredMuni(prev => (prev && !prev.isTouch ? null : prev));
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  const touch = e.touches && e.touches[0];
+                  setHoveredMuni({
+                    ...item,
+                    x: touch ? touch.clientX : 180,
+                    y: touch ? touch.clientY : 240,
+                    isTouch: true
+                  });
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEntityFicha('municipio', feature.properties.name);
+                }}
+              />
+            );
+          })}
+        </svg>
+      );
+    };
+
+    return (
+      <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-4 animate-in fade-in space-y-5">
+        {/* Cabeçalho Estratégico do Cruzamento + Fonte de Emendas */}
+        <div className="bg-white border border-slate-300 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="bg-slate-900 text-amber-300 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
+                Módulo Exclusivo GesTAgen
+              </span>
+              <span className="text-[11px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5">
+                Fonte Emendas: <strong>{emendasSourceLabel}</strong> ({emendas.length} registros)
+              </span>
+            </div>
+            <h1 className="text-base sm:text-xl font-black uppercase text-slate-900 mt-1 tracking-tight">
+              Matriz Territorial de 4 Quadrantes: Emendas Parlamentares × Presença de Agenda
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowSourceModal(!showSourceModal)}
+              className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-slate-900 border border-slate-400 rounded-xs text-xs font-bold uppercase flex items-center gap-1.5 transition-colors"
+            >
+              <DatabaseIcon className="w-3.5 h-3.5" /> Conectar / Importar Emendas
+            </button>
+            <button
+              onClick={exportCruzamentoCSV}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xs text-xs font-bold uppercase flex items-center gap-1.5 transition-colors"
+            >
+              <DownloadIcon className="w-3.5 h-3.5" /> Exportar Matriz CSV
+            </button>
+          </div>
+        </div>
+
+        {/* Painel / Modal de Conexão com a Planilha ou CSV do TABULUM - Emendas */}
+        {showSourceModal && (
+          <div className="bg-amber-50/90 border-2 border-slate-800 p-4 shadow-md space-y-3">
+            <div className="flex justify-between items-center border-b border-slate-300 pb-2">
+              <span className="text-xs font-bold uppercase text-slate-900 flex items-center gap-1.5">
+                <DatabaseIcon className="w-4 h-4 text-teal-700" /> Configurar Fonte de Dados do TABULUM - SIG-Emendas
+              </span>
+              <button onClick={() => setShowSourceModal(false)} className="text-slate-500 hover:text-rose-700">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white border border-slate-300 p-3 space-y-2">
+                <label className="block text-[11px] font-bold uppercase text-teal-800">
+                  Opção 1: URL da API Apps Script ou Link CSV Publicado (Google Sheets)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    placeholder="Cole a URL do Web App ou CSV do SIG-Emendas..."
+                    className="flex-1 px-2.5 py-1.5 text-xs border border-slate-300 focus:outline-none focus:border-teal-700"
+                  />
+                  <button
+                    onClick={handleSaveEmendasUrl}
+                    className="px-3 py-1.5 bg-teal-700 text-white text-xs font-bold uppercase hover:bg-teal-800"
+                  >
+                    Conectar
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Dica: Você também pode definir <code>VITE_EMENDAS_API_URL</code> no ambiente da Vercel.
+                </p>
+              </div>
+
+              <div className="bg-white border border-slate-300 p-3 space-y-2">
+                <label className="block text-[11px] font-bold uppercase text-rose-800">
+                  Opção 2: Carregar Arquivo CSV ou JSON exportado do SIG-Emendas
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.json"
+                  onChange={handleFileUploadEmendas}
+                  className="block w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:border file:border-slate-400 file:text-xs file:font-bold file:uppercase file:bg-amber-200 file:text-slate-900 hover:file:bg-amber-300 cursor-pointer"
+                />
+                <p className="text-[10px] text-slate-500">
+                  O arquivo importado fica salvo no cache local do navegador para consultas imediatas.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cards Interativos dos 4 Quadrantes (Clicáveis para filtrar Mapa e Tabela) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {(['Q1', 'Q2', 'Q3', 'Q4']).map(qKey => {
+            const meta = QUADRANT_META[qKey];
+            const st = quadrantStats[qKey];
+            const isSelected = selectedQuadrantFilter === qKey;
+
+            return (
+              <div
+                key={qKey}
+                onClick={() => setSelectedQuadrantFilter(prev => prev === qKey ? 'ALL' : qKey)}
+                className={`p-4 border cursor-pointer transition-all shadow-xs flex flex-col justify-between ${meta.cardClass} ${
+                  isSelected ? 'ring-2 ring-slate-950 scale-[1.01]' : 'opacity-95 hover:opacity-100'
+                }`}
+              >
+                <div>
+                  <div className="flex justify-between items-start gap-2 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-black/15">
+                      {qKey}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase underline">
+                      {isSelected ? 'Filtro Ativo (Ver Todos)' : 'Filtrar Quadrante'}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-black uppercase tracking-tight mt-1">{meta.title}</h3>
+                  <p className="text-[11px] opacity-85 mt-0.5">{meta.subtitle}</p>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-current/20 flex items-baseline justify-between">
+                  <div>
+                    <span className="text-2xl font-black leading-none">{st.count}</span>
+                    <span className="text-[11px] font-bold uppercase ml-1">municípios</span>
+                  </div>
+                  <div className="text-right text-[11px] font-bold">
+                    {st.valor > 0 && <div>{formatCurrencyBRL(st.valor)}</div>}
+                    {st.agendas > 0 && <div>{st.agendas} ag. ({st.horas.toFixed(0)}h)</div>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Grid Central: Mapa de 4 Quadrantes (2/3) + Matriz 2x2 e Resumo Regional (1/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Mapa de 4 Quadrantes de Santa Catarina */}
+          <div className="lg:col-span-2 bg-white border border-slate-300 shadow-xs flex flex-col overflow-hidden">
+            <div className="bg-slate-900 text-white border-b border-slate-300 p-3 flex flex-wrap justify-between items-center gap-2">
+              <div className="flex items-center gap-2">
+                <CrosshairIcon className="w-4 h-4 text-amber-300" />
+                <span className="font-bold uppercase text-xs sm:text-sm tracking-wider">
+                  Mapa de 4 Quadrantes de Santa Catarina (Emendas × Agendas)
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase">
+                <button
+                  onClick={() => setSelectedQuadrantFilter('ALL')}
+                  className={`px-2 py-0.5 border ${selectedQuadrantFilter === 'ALL' ? 'bg-amber-300 text-slate-900 border-amber-400' : 'bg-slate-800 text-slate-300 border-slate-700'}`}
+                >
+                  Todos ({crossedMunicipalities.length})
+                </button>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#007D8A] border border-white inline-block"></span> Q1: Ambos</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#be123c] border border-white inline-block"></span> Q2: Só Emenda</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#fcd34d] border border-slate-900 inline-block"></span> Q3: Só Agenda</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-white border border-slate-400 inline-block"></span> Q4: Nenhum</span>
+              </div>
+            </div>
+
+            <div className="p-2 sm:p-4 bg-white relative flex flex-col items-center justify-center">
+              {renderFourQuadrantMap()}
+
+              {hoveredMuni && (
+                <div
+                  className={`${
+                    hoveredMuni.isTouch
+                      ? 'sticky bottom-2 left-2 right-2 w-full max-w-sm mx-auto mt-2'
+                      : 'fixed pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px]'
+                  } bg-white border-2 border-slate-900 p-3 shadow-lg z-50 min-w-[240px]`}
+                  style={!hoveredMuni.isTouch ? { left: hoveredMuni.x, top: hoveredMuni.y } : {}}
+                >
+                  <div className="flex justify-between items-start gap-2 border-b border-slate-200 pb-1.5 mb-1.5">
+                    <div>
+                      <p className="font-black text-slate-900 text-xs sm:text-sm uppercase">{hoveredMuni.name}</p>
+                      <span className="text-[10px] font-semibold uppercase text-slate-500">{hoveredMuni.regiao}</span>
+                    </div>
+                    <span className={`px-1.5 py-0.5 text-[9px] font-bold uppercase border ${QUADRANT_META[hoveredMuni.quadrant]?.badgeClass}`}>
+                      {hoveredMuni.quadrant}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-rose-50/70 border border-rose-200 p-1.5">
+                      <span className="text-[9px] font-bold uppercase text-rose-800 block">Emendas</span>
+                      <strong className="text-rose-700 text-xs">{hoveredMuni.emendasCount}</strong>
+                      <span className="block text-[10px] font-semibold text-slate-800">
+                        {formatCurrencyBRL(hoveredMuni.valorEmendas)}
+                      </span>
+                    </div>
+                    <div className="bg-teal-50/70 border border-teal-200 p-1.5">
+                      <span className="text-[9px] font-bold uppercase text-teal-800 block">Agendas</span>
+                      <strong className="text-teal-700 text-xs">{hoveredMuni.agendasCount}</strong>
+                      <span className="block text-[10px] font-semibold text-slate-800">
+                        {hoveredMuni.horasAgendas.toFixed(1)}h ({hoveredMuni.presenciaisCount} pres.)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Coluna Direita: Diagrama 2x2 de Quadrantes + Cobertura por Região de SC */}
+          <div className="lg:col-span-1 space-y-5">
+            {/* Matriz Visual 2×2 Mondrian */}
+            <div className="bg-white border border-slate-300 p-4 shadow-xs">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3">
+                <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                  Diagrama 2×2 de Quadrantes
+                </p>
+                <span className="text-[10px] font-semibold uppercase text-slate-400">Eixo Y: Emendas • Eixo X: Agendas</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 border-l-2 border-b-2 border-slate-800 p-2 bg-slate-50">
+                {/* Topo Esquerdo: Q2 (Com Emenda, Sem Agenda) */}
+                <div
+                  onClick={() => setSelectedQuadrantFilter(prev => prev === 'Q2' ? 'ALL' : 'Q2')}
+                  className="bg-rose-700 text-white p-3 border border-slate-900 cursor-pointer hover:opacity-95"
+                >
+                  <div className="flex justify-between text-[10px] font-bold uppercase opacity-90">
+                    <span>Q2 • Só Emenda</span>
+                    <span>Visita Pend.</span>
+                  </div>
+                  <div className="text-2xl font-black mt-1">{quadrantStats.Q2.count}</div>
+                  <div className="text-[10px] font-semibold mt-0.5">{formatCurrencyBRL(quadrantStats.Q2.valor)}</div>
+                </div>
+
+                {/* Topo Direito: Q1 (Com Emenda, Com Agenda) */}
+                <div
+                  onClick={() => setSelectedQuadrantFilter(prev => prev === 'Q1' ? 'ALL' : 'Q1')}
+                  className="bg-teal-700 text-white p-3 border border-slate-900 cursor-pointer hover:opacity-95"
+                >
+                  <div className="flex justify-between text-[10px] font-bold uppercase opacity-90">
+                    <span>Q1 • Sinergia</span>
+                    <span>Emenda + Agenda</span>
+                  </div>
+                  <div className="text-2xl font-black mt-1">{quadrantStats.Q1.count}</div>
+                  <div className="text-[10px] font-semibold mt-0.5">
+                    {formatCurrencyBRL(quadrantStats.Q1.valor)} • {quadrantStats.Q1.agendas} ag.
+                  </div>
+                </div>
+
+                {/* Base Esquerda: Q4 (Sem Emenda, Sem Agenda) */}
+                <div
+                  onClick={() => setSelectedQuadrantFilter(prev => prev === 'Q4' ? 'ALL' : 'Q4')}
+                  className="bg-white text-slate-700 p-3 border border-slate-400 cursor-pointer hover:bg-slate-100"
+                >
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-slate-500">
+                    <span>Q4 • Vazio</span>
+                    <span>0 Em. / 0 Ag.</span>
+                  </div>
+                  <div className="text-2xl font-black text-slate-800 mt-1">{quadrantStats.Q4.count}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Sem cobertura atual</div>
+                </div>
+
+                {/* Base Direita: Q3 (Sem Emenda, Com Agenda) */}
+                <div
+                  onClick={() => setSelectedQuadrantFilter(prev => prev === 'Q3' ? 'ALL' : 'Q3')}
+                  className="bg-amber-300 text-slate-900 p-3 border border-slate-900 cursor-pointer hover:bg-amber-400"
+                >
+                  <div className="flex justify-between text-[10px] font-bold uppercase">
+                    <span>Q3 • Só Agenda</span>
+                    <span>Base s/ Emenda</span>
+                  </div>
+                  <div className="text-2xl font-black mt-1">{quadrantStats.Q3.count}</div>
+                  <div className="text-[10px] font-bold mt-0.5">{quadrantStats.Q3.agendas} agendas realizadas</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Balanço por Região de SC */}
+            <div className="bg-white border border-slate-300 p-4 shadow-xs">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3">
+                <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
+                  Cruzamento por Região de SC
+                </p>
+                <span className="text-[10px] font-semibold uppercase text-slate-400">Q1 / Q2 / Q3</span>
+              </div>
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {regionalCrossStats.map(r => (
+                  <div
+                    key={r.regiao}
+                    onClick={() => openEntityFicha('regiao', r.regiao)}
+                    className="border border-slate-200 p-2 hover:bg-amber-50/50 cursor-pointer transition-colors"
+                  >
+                    <div className="flex justify-between items-baseline text-[11px] font-bold uppercase text-slate-800">
+                      <span className="truncate pr-2">{r.regiao}</span>
+                      <span className="text-rose-700 whitespace-nowrap">{formatCurrencyBRL(r.valorEmendas)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-slate-600 mt-1">
+                      <div className="flex gap-1.5 font-bold">
+                        <span className="text-teal-800">Q1: {r.q1}</span>
+                        <span className="text-rose-700">Q2: {r.q2}</span>
+                        <span className="text-amber-800">Q3: {r.q3}</span>
+                      </div>
+                      <span>{r.agendasCount} agendas</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabela Consolidada de Municípios (Emendas × Agendas) */}
+        <div className="bg-white border border-slate-300 shadow-xs">
+          <div className="bg-amber-100/90 border-b border-slate-300 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs uppercase text-slate-900">
+                Relatório Municipal Cruzado ({tableRows.length} municípios listados)
+              </span>
+              {selectedQuadrantFilter !== 'ALL' && (
+                <button
+                  onClick={() => setSelectedQuadrantFilter('ALL')}
+                  className="px-2 py-0.5 bg-rose-700 text-white text-[10px] font-bold uppercase rounded-xs"
+                >
+                  Limpar Filtro {selectedQuadrantFilter} ✕
+                </button>
+              )}
+            </div>
+
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={onlyActiveRows}
+                onChange={(e) => setOnlyActiveRows(e.target.checked)}
+                className="accent-teal-700 w-3.5 h-3.5"
+              />
+              <span>Ocultar municípios sem emendas e sem agendas (Q4)</span>
+            </label>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-[1050px] w-full border-collapse">
+              <thead className="bg-amber-200/85 border-b border-slate-400 text-[11px] font-bold uppercase text-slate-800">
+                <tr>
+                  <th onClick={() => requestCruzamentoSort('name')} className="py-2.5 px-3 text-left border-r border-slate-300 cursor-pointer hover:bg-amber-300/70">Município</th>
+                  <th onClick={() => requestCruzamentoSort('regiao')} className="py-2.5 px-2.5 text-left border-r border-slate-300 cursor-pointer hover:bg-amber-300/70">Região SC</th>
+                  <th onClick={() => requestCruzamentoSort('quadrant')} className="py-2.5 px-2.5 text-center border-r border-slate-300 cursor-pointer hover:bg-amber-300/70">Quadrante</th>
+                  <th onClick={() => requestCruzamentoSort('emendasCount')} className="py-2.5 px-2.5 text-center border-r border-slate-300 cursor-pointer hover:bg-amber-300/70">Nº Emendas</th>
+                  <th onClick={() => requestCruzamentoSort('valorEmendas')} className="py-2.5 px-3 text-right border-r border-slate-300 cursor-pointer hover:bg-amber-300/70">Valor Emendas (R$)</th>
+                  <th onClick={() => requestCruzamentoSort('agendasCount')} className="py-2.5 px-2.5 text-center border-r border-slate-300 cursor-pointer hover:bg-amber-300/70">Nº Agendas</th>
+                  <th onClick={() => requestCruzamentoSort('horasAgendas')} className="py-2.5 px-2.5 text-center border-r border-slate-300 cursor-pointer hover:bg-amber-300/70">Horas</th>
+                  <th className="py-2.5 px-3 text-left border-r border-slate-300">Áreas / Objetos das Emendas</th>
+                  <th className="py-2.5 px-2.5 text-left">Articuladores (Agenda)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs">
+                {tableRows.map(row => {
+                  const qMeta = QUADRANT_META[row.quadrant] || QUADRANT_META.Q4;
+                  return (
+                    <tr
+                      key={row.norm}
+                      onClick={() => openEntityFicha('municipio', row.name)}
+                      className="hover:bg-amber-50/60 cursor-pointer transition-colors"
+                    >
+                      <td className="py-2 px-3 font-bold uppercase text-teal-800 hover:underline border-r border-slate-200">
+                        {row.name}
+                      </td>
+                      <td
+                        onClick={(e) => openEntityFicha('regiao', row.regiao, e)}
+                        className="py-2 px-2.5 text-[11px] font-medium text-slate-600 hover:text-teal-700 hover:underline border-r border-slate-200"
+                      >
+                        {row.regiao}
+                      </td>
+                      <td className="py-2 px-2.5 text-center border-r border-slate-200">
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase border ${qMeta.badgeClass}`}>
+                          {qMeta.short}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2.5 text-center font-bold text-rose-700 border-r border-slate-200">
+                        {row.emendasCount}
+                      </td>
+                      <td className="py-2 px-3 text-right font-bold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                        {row.valorEmendas > 0 ? formatCurrencyBRL(row.valorEmendas) : '-'}
+                      </td>
+                      <td className="py-2 px-2.5 text-center font-bold text-teal-800 border-r border-slate-200">
+                        {row.agendasCount} {row.presenciaisCount > 0 && <small className="text-slate-500 font-normal">({row.presenciaisCount} pres.)</small>}
+                      </td>
+                      <td className="py-2 px-2.5 text-center font-medium text-slate-700 border-r border-slate-200">
+                        {row.horasAgendas > 0 ? `${row.horasAgendas.toFixed(1)}h` : '-'}
+                      </td>
+                      <td className="py-2 px-3 text-[11px] text-slate-700 border-r border-slate-200 max-w-[260px] truncate" title={row.objetosEmendas}>
+                        {row.areasEmendas ? <strong className="text-rose-800">{row.areasEmendas}: </strong> : ''}
+                        {row.objetosEmendas || '-'}
+                      </td>
+                      <td className="py-2 px-2.5 text-[11px] font-semibold text-rose-700">
+                        {row.articuladores || '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {tableRows.length === 0 && (
+                  <tr>
+                    <td colSpan="9" className="py-8 text-center text-slate-400 uppercase font-medium text-xs">
+                      Nenhum município encontrado para o filtro selecionado.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -1266,7 +2452,7 @@ export default function App() {
       );
     }
 
-    // MODO CARD PAGINADO (padrão suave TABULUM - Emendas)
+    // MODO CARD PAGINADO
     const totalCards = rows.length;
     const effectivePerPage = cardsPerPage === 'all' ? (totalCards || 1) : Number(cardsPerPage);
     const totalPages = Math.max(Math.ceil(totalCards / effectivePerPage), 1);
@@ -1444,7 +2630,7 @@ export default function App() {
   );
 
   // ============================================================================
-  // FICHA INTERATIVA DE CRUZAMENTO DE DADOS (PADRÃO TABULUM - EMENDAS)
+  // FICHA INTERATIVA DE CRUZAMENTO DE DADOS
   // ============================================================================
   const EntityProfileView = () => {
     const [fichaSearch, setFichaSearch] = useState('');
@@ -1463,6 +2649,23 @@ export default function App() {
         return cellVal.toLowerCase() === String(value).trim().toLowerCase();
       });
     }, [events, meta.field, value, showPessoal]);
+
+    // Emendas vinculadas caso a Ficha seja de um Município ou Região SC
+    const linkedEmendas = useMemo(() => {
+      if (type === 'municipio') {
+        const normVal = normalizeStr(value);
+        return emendas.filter(em => em['Município_Norm'] === normVal);
+      }
+      if (type === 'regiao') {
+        const normVal = normalizeStr(value);
+        return emendas.filter(em => normalizeStr(em['Região']) === normVal);
+      }
+      return [];
+    }, [emendas, type, value]);
+
+    const totalValorLinkedEmendas = useMemo(() => {
+      return linkedEmendas.reduce((acc, em) => acc + (Number(em['Valor']) || 0), 0);
+    }, [linkedEmendas]);
 
     const fichaEvents = useMemo(() => {
       const filtered = baseEntityEvents.filter(e => {
@@ -1594,9 +2797,19 @@ export default function App() {
                 {value}
               </h1>
             </div>
-            <div className="bg-white border border-slate-300 px-3.5 py-2 text-right rounded-xs">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">Total de Visitas / Agendas</span>
-              <span className="text-xl font-bold text-rose-700">{totalVisitas}</span>
+            <div className="flex flex-wrap gap-2">
+              {(type === 'municipio' || type === 'regiao') && (
+                <div className="bg-white border border-slate-300 px-3.5 py-2 text-right rounded-xs">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Emendas Vinculadas</span>
+                  <span className="text-xl font-bold text-teal-800">
+                    {linkedEmendas.length} ({formatCurrencyBRL(totalValorLinkedEmendas)})
+                  </span>
+                </div>
+              )}
+              <div className="bg-white border border-slate-300 px-3.5 py-2 text-right rounded-xs">
+                <span className="text-[10px] font-bold uppercase text-slate-400 block">Total de Visitas / Agendas</span>
+                <span className="text-xl font-bold text-rose-700">{totalVisitas}</span>
+              </div>
             </div>
           </div>
 
@@ -1714,7 +2927,7 @@ export default function App() {
   };
 
   // ============================================================================
-  // DASHBOARD E MAPA VETORIAL LIMPO (PADRÃO TABULUM - EMENDAS)
+  // DASHBOARD E MAPA VETORIAL LIMPO
   // ============================================================================
   const DashboardView = () => {
     const [hoveredMuni, setHoveredMuni] = useState(null);
@@ -1741,7 +2954,6 @@ export default function App() {
     const articuladoresData = buildGroupStats('Articulador');
     const bairrosFloripaData = buildGroupStats('Bairro', ['centro / nao especificado', 'digital / online']);
 
-    // Evolução Mensal no formato de colunas verticais limpas do TABULUM - Emendas
     const timelineMensalData = useMemo(() => {
       const map = {};
       filteredAndSortedEvents.forEach(ev => {
@@ -1768,14 +2980,13 @@ export default function App() {
       return map;
     }, [filteredAndSortedEvents]);
 
-    // Cores Mondrian Suaves no Mapa Vetorial (Branco, Amarelo, Azul-Esverdeado, Carmesim)
     const getMuniColor = (muniStats) => {
       if (!muniStats || muniStats.count === 0) return '#ffffff';
       if (mapMetric === 'horas') {
         const h = muniStats.horas;
-        if (h <= 4) return '#fcd34d';   // Amarelo Mondrian
-        if (h <= 15) return '#007D8A';  // Azul-Esverdeado Mondrian
-        return '#be123c';               // Carmesim Mondrian
+        if (h <= 4) return '#fcd34d';
+        if (h <= 15) return '#007D8A';
+        return '#be123c';
       }
       const qtd = muniStats.count;
       if (qtd <= 2) return '#fcd34d';
@@ -1884,7 +3095,7 @@ export default function App() {
     return (
       <div className="max-w-[98%] xl:max-w-[1600px] mx-auto px-3 sm:px-4 py-4 animate-in fade-in space-y-5">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Coluna Esquerda: Card Resumo + Barras por Classe, Região e Articulador */}
+          {/* Coluna Esquerda */}
           <div className="lg:col-span-1 space-y-5">
             <div className="bg-amber-200/90 border border-slate-400 p-4 shadow-xs flex flex-col justify-center">
               <div className="flex justify-between items-center border-b border-slate-500/40 pb-2 mb-2.5">
@@ -1992,9 +3203,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Coluna Direita (2/3): Mapa Vetorial Limpo de SC + Evolução Mensal em Colunas + Bairros de Florianópolis */}
+          {/* Coluna Direita (2/3) */}
           <div className="lg:col-span-2 space-y-5 self-start">
-            {/* Mapa de Santa Catarina no padrão TABULUM - Emendas */}
             <div className="bg-white border border-slate-300 shadow-xs flex flex-col relative overflow-hidden">
               <div className="bg-teal-700 border-b border-slate-300 p-3 flex flex-wrap justify-between items-center gap-3 z-10">
                 <p className="text-white font-bold uppercase text-xs sm:text-sm tracking-wider flex items-center">
@@ -2074,7 +3284,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Gráfico de Evolução Mensal das Agendas (Colunas Verticais Limpas no padrão TABULUM - Emendas) */}
+            {/* Gráfico de Evolução Mensal das Agendas */}
             <div className="bg-white border border-slate-300 p-4 shadow-xs">
               <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-4">
                 <p className="text-slate-900 font-bold uppercase text-xs tracking-wider">
@@ -2151,7 +3361,7 @@ export default function App() {
   };
 
   // ============================================================================
-  // FICHA INDIVIDUAL DE DETALHE DO COMPROMISSO (PADRÃO TABULUM - EMENDAS)
+  // FICHA INDIVIDUAL DE DETALHE DO COMPROMISSO
   // ============================================================================
   const DetailView = () => {
     if (!selectedEvent) return null;
@@ -2314,6 +3524,7 @@ export default function App() {
       <main>
         {currentView === 'list' && <ListView />}
         {currentView === 'dashboard' && <DashboardView />}
+        {currentView === 'cruzamento' && <CruzamentoView />}
         {currentView === 'entity' && <EntityProfileView />}
         {currentView === 'detail' && <DetailView />}
       </main>
